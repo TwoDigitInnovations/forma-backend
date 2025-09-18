@@ -1,3 +1,5 @@
+"use Client"
+
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const { object } = require('underscore');
