@@ -15,5 +15,5 @@ module.exports = {
   created,
   badReq,
   notFound,
-  conflict
+  conflict,
 };

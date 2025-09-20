@@ -1,16 +1,16 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const boqItemSchema = new mongoose.Schema(
   {
     itemNo: { type: String, required: true }, // Will store numbering like "1.0", "1.1"
-    itemType: { type: String, enum: ["item", "subitem"], default: "item" },
+    itemType: { type: String, enum: ['item', 'subitem'], default: 'item' },
     description: { type: String, required: true },
     quantity: { type: String, required: true },
     unit: { type: String, required: true },
     rate: { type: String, required: true },
     sortOrder: { type: Number, default: 1 },
   },
-  { _id: true }
+  { _id: true },
 );
 
 const boqSectionSchema = new mongoose.Schema(
@@ -19,7 +19,7 @@ const boqSectionSchema = new mongoose.Schema(
     sectionId: { type: String }, // optional if you want custom id
     items: [boqItemSchema], // items grouped under this section
   },
-  { _id: true }
+  { _id: true },
 );
 
 const boqTemplateSchema = new mongoose.Schema(
@@ -37,12 +37,12 @@ const boqTemplateSchema = new mongoose.Schema(
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-    }
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-boqTemplateSchema.set("toJSON", {
+boqTemplateSchema.set('toJSON', {
   getters: true,
   virtuals: false,
   transform: (doc, ret) => {
@@ -51,5 +51,5 @@ boqTemplateSchema.set("toJSON", {
   },
 });
 
-const Template = mongoose.model("Template", boqTemplateSchema);
+const Template = mongoose.model('Template', boqTemplateSchema);
 module.exports = Template;

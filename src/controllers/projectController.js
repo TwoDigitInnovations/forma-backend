@@ -2,7 +2,6 @@ const Project = require('../models/Projectschema');
 const response = require('./../../responses');
 
 const projectController = {
-
   createProject: async (req, res) => {
     try {
       const payload = req?.body || {};
@@ -12,13 +11,13 @@ const projectController = {
       const existingProject = await Project.findOne({
         projectName: payload.projectName,
         location: payload.location,
-        isActive: true
+        isActive: true,
       });
 
       if (existingProject) {
         return res.status(400).json({
           status: false,
-          message: 'Project with the same name and location already exists'
+          message: 'Project with the same name and location already exists',
         });
       }
 
@@ -27,7 +26,7 @@ const projectController = {
 
       return response.ok(res, {
         message: 'Project created successfully',
-        data: newProject
+        data: newProject,
       });
     } catch (error) {
       console.error('Create project error:', error);
@@ -55,7 +54,12 @@ const projectController = {
         filter.$or = [
           { projectName: { $regex: req.query.search, $options: 'i' } },
           { location: { $regex: req.query.search, $options: 'i' } },
-          { 'contractorInfo.contractorName': { $regex: req.query.search, $options: 'i' } }
+          {
+            'contractorInfo.contractorName': {
+              $regex: req.query.search,
+              $options: 'i',
+            },
+          },
         ];
       }
 
@@ -75,8 +79,8 @@ const projectController = {
           current: page,
           pages: Math.ceil(total / limit),
           total,
-          limit
-        }
+          limit,
+        },
       });
     } catch (error) {
       console.error('Get projects error:', error);
@@ -86,23 +90,23 @@ const projectController = {
 
   getProjectById: async (req, res) => {
     try {
-      console.log(req?.params?.id)
+      console.log(req?.params?.id);
       const project = await Project.findById(req?.params?.id)
         .populate('createdBy', 'name email')
         .populate('updatedBy', 'name email');
 
-      console.log(project)
+      console.log(project);
 
       if (!project || !project.isActive) {
         return res.status(404).json({
           status: false,
-          message: 'Project not found'
+          message: 'Project not found',
         });
       }
 
       return response.ok(res, {
         message: 'Project fetched successfully',
-        data: project
+        data: project,
       });
     } catch (error) {
       console.error('Get project by ID error:', error);
@@ -120,22 +124,23 @@ const projectController = {
       if (!project || !project.isActive) {
         return res.status(404).json({
           status: false,
-          message: 'Project not found'
+          message: 'Project not found',
         });
       }
       payload.updatedBy = req.user?.id || req.userId;
       payload.ProviderId = req.user?.id || req.userId;
-      
+
       const updatedProject = await Project.findByIdAndUpdate(
         id,
         { $set: payload },
-        { new: true, runValidators: true }
-      ).populate('createdBy', 'name email')
+        { new: true, runValidators: true },
+      )
+        .populate('createdBy', 'name email')
         .populate('updatedBy', 'name email');
 
       return response.ok(res, {
         message: 'Project updated successfully',
-        data: updatedProject
+        data: updatedProject,
       });
     } catch (error) {
       console.error('Update project error:', error);
@@ -150,15 +155,21 @@ const projectController = {
       if (!id || !status) {
         return res.status(400).json({
           status: false,
-          message: 'Project ID and status are required'
+          message: 'Project ID and status are required',
         });
       }
 
-      const validStatuses = ['Planning', 'In Progress', 'On Hold', 'Completed', 'Cancelled'];
+      const validStatuses = [
+        'Planning',
+        'In Progress',
+        'On Hold',
+        'Completed',
+        'Cancelled',
+      ];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({
           status: false,
-          message: 'Invalid status value'
+          message: 'Invalid status value',
         });
       }
 
@@ -167,28 +178,31 @@ const projectController = {
       if (!project || !project.isActive) {
         return res.status(404).json({
           status: false,
-          message: 'Project not found'
+          message: 'Project not found',
         });
       }
 
       const updateData = {
         status,
-        updatedBy: req.user?.id || req.userId
+        updatedBy: req.user?.id || req.userId,
       };
 
       const updatedProject = await Project.findByIdAndUpdate(
         id,
         { $set: updateData },
-        { new: true }
+        { new: true },
       );
 
       return response.ok(res, {
         message: 'Project status updated successfully',
-        data: updatedProject
+        data: updatedProject,
       });
     } catch (error) {
       console.error('Update project status error:', error);
-      return response.error(res, error.message || 'Failed to update project status');
+      return response.error(
+        res,
+        error.message || 'Failed to update project status',
+      );
     }
   },
 
@@ -201,22 +215,19 @@ const projectController = {
       if (!project || !project.isActive) {
         return res.status(404).json({
           status: false,
-          message: 'Project not found'
+          message: 'Project not found',
         });
       }
 
-      await Project.findByIdAndUpdate(
-        id,
-        {
-          $set: {
-            isActive: false,
-            updatedBy: req.user?.id || req.userId
-          }
-        }
-      );
+      await Project.findByIdAndUpdate(id, {
+        $set: {
+          isActive: false,
+          updatedBy: req.user?.id || req.userId,
+        },
+      });
 
       return response.ok(res, {
-        message: 'Project deleted successfully'
+        message: 'Project deleted successfully',
       });
     } catch (error) {
       console.error('Delete project error:', error);
@@ -233,9 +244,9 @@ const projectController = {
             _id: '$status',
             count: { $sum: 1 },
             totalBudget: { $sum: '$projectBudget' },
-            totalContract: { $sum: '$contractAmount' }
-          }
-        }
+            totalContract: { $sum: '$contractAmount' },
+          },
+        },
       ]);
 
       const totalProjects = await Project.countDocuments({ isActive: true });
@@ -244,15 +255,17 @@ const projectController = {
         message: 'Project statistics fetched successfully',
         data: {
           totalProjects,
-          statusBreakdown: stats
-        }
+          statusBreakdown: stats,
+        },
       });
     } catch (error) {
       console.error('Get project stats error:', error);
-      return response.error(res, error.message || 'Failed to fetch project statistics');
+      return response.error(
+        res,
+        error.message || 'Failed to fetch project statistics',
+      );
     }
   },
-  
 };
 
 module.exports = projectController;

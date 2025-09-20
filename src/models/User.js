@@ -1,15 +1,14 @@
-"use Client"
+'use Client';
 
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { object } = require('underscore');
 
 const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
     email: {
       type: String,
@@ -19,33 +18,33 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [
         /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/,
-        'Please enter a valid email address'
-      ]
+        'Please enter a valid email address',
+      ],
     },
     password: {
       type: String,
       required: true,
-      minlength: [6, 'Password must be at least 6 characters long']
+      minlength: [6, 'Password must be at least 6 characters long'],
     },
     phone: {
-      type: String
+      type: String,
     },
     role: {
       type: String,
       enum: ['User', 'Admin', 'Provider'], // Define user roles
-      default: 'User'
+      default: 'User',
     },
     status: {
       type: String,
       enum: ['pending', 'verified', 'suspend'], // Define user roles
-      default: 'pending'
+      default: 'pending',
     },
     createdAt: {
       type: Date,
-      default: Date.now
-    }
+      default: Date.now,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 userSchema.methods.isPasswordMatch = async function (password) {

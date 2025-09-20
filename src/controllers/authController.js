@@ -4,14 +4,13 @@ const jwt = require('jsonwebtoken');
 const response = require('../../responses');
 const Verification = require('@models/verification');
 const userHelper = require('../helper/user');
-const mailNotification = require('./../services/mailNotification');
+// const mailNotification = require('./../services/mailNotification');
 
 module.exports = {
-
   register: async (req, res) => {
     try {
       const { name, email, password, phone, role } = req.body;
-      console.log("📩 Incoming body:", req.body);
+      console.log('📩 Incoming body:', req.body);
       if (password.length < 6) {
         return res
           .status(400)
@@ -29,13 +28,15 @@ module.exports = {
         email,
         password: hashedPassword,
         phone,
-        role
+        role,
       });
 
       await newUser.save();
       const userResponse = await User.findById(newUser._id).select('-password');
 
-      res.status(201).json({ message: 'registered successfully', user: userResponse });
+      res
+        .status(201)
+        .json({ message: 'registered successfully', user: userResponse });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Server error' });
@@ -65,12 +66,12 @@ module.exports = {
       if (user.role === 'Seller') {
         if (user.status === 'pending') {
           return res.status(403).json({
-            message: 'Please wait until your account is verified by admin.'
+            message: 'Please wait until your account is verified by admin.',
           });
         }
         if (user.status === 'suspend') {
           return res.status(403).json({
-            message: 'Your account has been suspended. Contact support.'
+            message: 'Your account has been suspended. Contact support.',
           });
         }
       }
@@ -78,13 +79,13 @@ module.exports = {
       const token = jwt.sign(
         { id: user._id, email: user.email, role: user.role },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
+        { expiresIn: process.env.JWT_EXPIRES_IN },
       );
 
       return response.ok(res, {
         message: 'Login successful',
         token,
-        user
+        user,
       });
     } catch (error) {
       console.error(error);
@@ -113,12 +114,12 @@ module.exports = {
       res.status(200).json({
         status: true,
         message: 'User profile fetched successfully',
-        data: user
+        data: user,
       });
     } catch (error) {
       res.status(500).json({
         status: false,
-        message: error.message || 'Internal Server Error'
+        message: error.message || 'Internal Server Error',
       });
     }
   },
@@ -141,22 +142,22 @@ module.exports = {
       console.log('fullNameFromDB', fullNameFromDB);
       if (fullNameFromRequest !== fullNameFromDB) {
         return response.badReq(res, {
-          message: 'Name and email do not match our records.'
+          message: 'Name and email do not match our records.',
         });
       }
 
       let ran_otp = Math.floor(1000 + Math.random() * 9000);
 
-      await mailNotification.sendOTPmail({
-        code: ran_otp,
-        email: email
-      });
+      // await mailNotification.sendOTPmail({
+      //   code: ran_otp,
+      //   email: email,
+      // });
 
       const ver = new Verification({
         email: email,
         user: user._id,
         otp: ran_otp,
-        expiration_at: userHelper.getDatewithAddedMinutes(5)
+        expiration_at: userHelper.getDatewithAddedMinutes(5),
       });
 
       await ver.save();
@@ -183,7 +184,7 @@ module.exports = {
         new Date().getTime() < new Date(ver.expiration_at).getTime()
       ) {
         let token = await userHelper.encode(
-          ver._id + ':' + userHelper.getDatewithAddedMinutes(5).getTime()
+          ver._id + ':' + userHelper.getDatewithAddedMinutes(5).getTime(),
         );
         ver.verified = true;
         await ver.save();
@@ -216,7 +217,7 @@ module.exports = {
       await Verification.findByIdAndDelete(verID);
       user.password = user.encryptPassword(password);
       await user.save();
-      mailNotification.passwordChange({ email: user.email });
+      // mailNotification.passwordChange({ email: user.email });
       return response.ok(res, { message: 'Password changed ! Login now.' });
     } catch (error) {
       return response.error(res, error);
@@ -235,7 +236,7 @@ module.exports = {
 
       const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
         new: true,
-        runValidators: true
+        runValidators: true,
       }).select('-password');
 
       if (!updatedUser) {
@@ -247,14 +248,14 @@ module.exports = {
       return res.status(200).json({
         status: true,
         message: 'Profile updated successfully',
-        data: updatedUser
+        data: updatedUser,
       });
     } catch (error) {
       console.error('Error updating profile:', error);
       return res.status(500).json({
         status: false,
         message: 'Internal server error',
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -267,7 +268,7 @@ module.exports = {
       if (!currentPassword || !newPassword) {
         return response.error(
           res,
-          'Old password and new password are required'
+          'Old password and new password are required',
         );
       }
 
@@ -290,10 +291,10 @@ module.exports = {
 
       return response.ok(res, {
         message: 'Password changed successfully',
-        role: user.role
+        role: user.role,
       });
     } catch (error) {
       return response.error(res, error.message || 'Something went wrong');
     }
-  }
+  },
 };

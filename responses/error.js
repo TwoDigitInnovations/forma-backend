@@ -5,6 +5,6 @@ module.exports = (res, error) => {
     status: false,
     name: error.name,
     message: error.message,
-    stack: error.stack
+    stack: error.stack,
   });
 };

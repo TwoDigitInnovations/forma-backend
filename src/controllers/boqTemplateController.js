@@ -1,9 +1,7 @@
-
 const Template = require('../models/Boqtemplate');
 const response = require('./../../responses');
 
 const TemplateController = {
-
   createTemplate: async (req, res) => {
     try {
       const payload = req?.body || {};
@@ -11,13 +9,13 @@ const TemplateController = {
 
       const existingTemplate = await Template.findOne({
         name: payload.name,
-        category: payload.category
+        category: payload.category,
       });
 
       if (existingTemplate) {
         return res.status(400).json({
           status: false,
-          message: "Template with same name and category already exists"
+          message: 'Template with same name and category already exists',
         });
       }
 
@@ -25,56 +23,56 @@ const TemplateController = {
       await newTemplate.save();
 
       return response.ok(res, {
-        message: "Template created successfully",
-        data: newTemplate
+        message: 'Template created successfully',
+        data: newTemplate,
       });
     } catch (error) {
-      console.error("Create template error:", error);
-      return response.error(res, error.message || "Failed to create template");
+      console.error('Create template error:', error);
+      return response.error(res, error.message || 'Failed to create template');
     }
   },
 
   getTemplates: async (req, res) => {
     try {
-      const templates = await Template.find().populate("createdBy", "name email");
+      const templates = await Template.find().populate(
+        'createdBy',
+        'name email',
+      );
 
       return response.ok(res, {
-        message: "Templates fetched successfully",
-        data: templates
+        message: 'Templates fetched successfully',
+        data: templates,
       });
     } catch (error) {
-      console.error("Get templates error:", error);
-      return response.error(res, error.message || "Failed to fetch templates");
+      console.error('Get templates error:', error);
+      return response.error(res, error.message || 'Failed to fetch templates');
     }
   },
 
   getTemplatesByProjectId: async (req, res) => {
     try {
       const { projectId } = req.params;
-      console.log("projectID", projectId)
+      console.log('projectID', projectId);
 
-      const templates = await Template.find({ projectId })
+      const templates = await Template.find({ projectId });
       // .populate("createdBy", "name email");
-      console.log("templates", templates)
+      console.log('templates', templates);
       if (!templates || templates.length === 0) {
         return res.status(404).json({
           status: false,
-          message: "No templates found for this project"
+          message: 'No templates found for this project',
         });
       }
 
-
       return response.ok(res, {
-        message: "Templates fetched successfully",
-        data: templates
+        message: 'Templates fetched successfully',
+        data: templates,
       });
     } catch (error) {
-      console.error("Get templates error:", error);
-      return response.error(res, error.message || "Failed to fetch templates");
+      console.error('Get templates error:', error);
+      return response.error(res, error.message || 'Failed to fetch templates');
     }
   },
-
-
 
   deleteTemplate: async (req, res) => {
     try {
@@ -84,19 +82,19 @@ const TemplateController = {
       if (!deletedTemplate) {
         return res.status(404).json({
           status: false,
-          message: "Template not found"
+          message: 'Template not found',
         });
       }
 
       return response.ok(res, {
-        message: "Template deleted successfully",
-        data: deletedTemplate
+        message: 'Template deleted successfully',
+        data: deletedTemplate,
       });
     } catch (error) {
-      console.error("Delete template error:", error);
-      return response.error(res, error.message || "Failed to delete template");
+      console.error('Delete template error:', error);
+      return response.error(res, error.message || 'Failed to delete template');
     }
-  }
+  },
 };
 
 module.exports = TemplateController;

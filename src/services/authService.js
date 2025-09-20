@@ -8,7 +8,7 @@ module.exports = {
       const decoded = jwt.verify(token, JWT_SECRET);
       return decoded;
     } catch (error) {
-      throw new Error('Invalid token');
+      throw new Error(error.message || 'Invalid token');
     }
-  }
+  },
 };

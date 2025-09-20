@@ -7,7 +7,7 @@ const {
   verifyOTP,
   changePassword,
   updateProfile,
-  changePasswordfromAdmin
+  changePasswordfromAdmin,
 } = require('@controllers/authController');
 const { authenticate } = require('@middlewares/authMiddleware');
 
