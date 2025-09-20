@@ -7,29 +7,11 @@ const BoqController = {
     try {
       const payload = req?.body || {};
       payload.createdBy = req.user?.id || req.userId;
-
-      // if source = "template", fetch template and use its items
-      if (payload.source === 'template' && payload.templateId) {
-        const template = await Template.findById(payload.templateId);
-        if (!template) {
-          return res.status(404).json({
-            status: false,
-            message: 'Template not found',
-          });
-        }
-        payload.items = template.items;
-      }
-
-      payload.items = payload.items.map((item) => ({
-        ...item,
-        amount: item.quantity * item.rate,
-      }));
-
       const newBoq = new BOQ(payload);
       await newBoq.save();
 
       return response.ok(res, {
-        message: 'BOQ created successfully',
+        message: 'BOQ Document Save successfully',
         data: newBoq,
       });
     } catch (error) {

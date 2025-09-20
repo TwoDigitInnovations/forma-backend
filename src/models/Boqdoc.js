@@ -1,26 +1,38 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const boqSchema = new mongoose.Schema({
-  projectId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Project',
-    required: true,
-  },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  source: { type: String, enum: ['scratch', 'template'], required: true },
-  items: [
-    {
-      itemName: { type: String, required: true },
-      unit: { type: String },
-      quantity: { type: Number, required: true },
-      rate: { type: Number, required: true },
-      amount: { type: Number },
+const boqSchema = new mongoose.Schema(
+  {
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Project",
+      required: true,
     },
-  ],
-  createdAt: { type: Date, default: Date.now },
-});
+    boqName: {
+      type: String,
+      required: true, // usually BOQ ka naam zaroori hota hai
+      trim: true,
+    },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    currency: { type: String, default: "USD" },
+    quantity: {
+      type: Number,
+      default: 1,
+    },
+    items: [
+      {
+        itemNo: { type: String },
+        description: { type: String },
+        unit: { type: String },
+        quantity: { type: Number, default: 0 },
+        rate: { type: Number, default: 0 },
+        amount: { type: Number, default: 0 },
+      },
+    ],
+  },
+  { timestamps: true }
+);
 
-boqSchema.set('toJSON', {
+boqSchema.set("toJSON", {
   getters: true,
   virtuals: false,
   transform: (doc, ret) => {
@@ -29,6 +41,6 @@ boqSchema.set('toJSON', {
   },
 });
 
-const BOQ = mongoose.model('BOQ', boqSchema);
+const BOQ = mongoose.model("BOQ", boqSchema);
 
 module.exports = BOQ;
