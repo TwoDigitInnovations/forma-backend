@@ -18,6 +18,9 @@ const boqSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
+    rate: {
+      type: Number,
+    },
     items: [
       {
         itemNo: { type: String },

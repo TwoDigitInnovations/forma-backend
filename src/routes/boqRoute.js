@@ -10,7 +10,8 @@ router.get(
   authenticate,
   BoqController.getBoqsByProject,
 );
-router.get('/getBoqById/:id', authenticate, BoqController.getBoqById);
+router.get('/getBoqById', authenticate, BoqController.getBoqById);
+router.post("/updateBoqById", authenticate, BoqController.updateBoqById)
 router.delete('/deleteBoq/:id', authenticate, BoqController.deleteBoq);
 
 module.exports = router;

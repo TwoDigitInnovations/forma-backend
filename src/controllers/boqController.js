@@ -20,7 +20,6 @@ const BoqController = {
     }
   },
 
-  // ✅ Get All BOQs for a Project
   getBoqsByProject: async (req, res) => {
     try {
       const { projectId } = req.params;
@@ -39,13 +38,14 @@ const BoqController = {
     }
   },
 
-  // ✅ Get BOQ by ID
   getBoqById: async (req, res) => {
     try {
-      const { id } = req.params;
+      const { projectId, id } = req.query; // fixed typo
+
       const boq = await BOQ.findById(id)
         .populate('createdBy', 'name email')
         .populate('projectId', 'name location');
+      console.log(boq)
 
       if (!boq) {
         return res.status(404).json({
@@ -55,21 +55,20 @@ const BoqController = {
       }
 
       return response.ok(res, {
-        message: 'BOQ fetched successfully',
+        message: 'BOQs fetched successfully',
         data: boq,
       });
     } catch (error) {
-      console.error('Get BOQ error:', error);
-      return response.error(res, error.message || 'Failed to fetch BOQ');
+      return response.error(res, error.message || 'Failed to fetch BOQs');
     }
   },
 
-  // ✅ Delete BOQ
   deleteBoq: async (req, res) => {
     try {
       const { id } = req.params;
-
+      console.log("id", id)
       const deletedBoq = await BOQ.findByIdAndDelete(id);
+
       if (!deletedBoq) {
         return res.status(404).json({
           status: false,
@@ -86,6 +85,42 @@ const BoqController = {
       return response.error(res, error.message || 'Failed to delete BOQ');
     }
   },
+
+  updateBoqById: async (req, res) => {
+    try {
+      const { id } = req.query;
+      const updateData = req.body;
+
+      if (!id) {
+        return res.status(400).json({
+          status: false,
+          message: "BOQ ID is required",
+        });
+      }
+
+      const updatedBoq = await BOQ.findByIdAndUpdate(id, updateData, {
+        new: true,
+      })
+        .populate("createdBy", "name email")
+        .populate("projectId", "name location");
+
+      if (!updatedBoq) {
+        return res.status(404).json({
+          status: false,
+          message: "BOQ not found",
+        });
+      }
+
+      return response.ok(res, {
+        message: "BOQ updated successfully",
+        data: updatedBoq,
+      });
+    } catch (error) {
+      console.error("Update BOQ error:", error);
+      return response.error(res, error.message || "Failed to update BOQ");
+    }
+  },
+
 };
 
 module.exports = BoqController;
