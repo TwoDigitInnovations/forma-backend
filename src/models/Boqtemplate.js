@@ -2,12 +2,12 @@ const mongoose = require('mongoose');
 
 const boqItemSchema = new mongoose.Schema(
   {
-    itemNo: { type: String, required: true }, // Will store numbering like "1.0", "1.1"
+    itemNo: { type: String, required: true }, 
     itemType: { type: String, enum: ['item', 'subitem'], default: 'item' },
     description: { type: String, required: true },
-    quantity: { type: String, required: true },
-    unit: { type: String, required: true },
-    rate: { type: String, required: true },
+    quantity: { type: String },
+    unit: { type: String },
+    rate: { type: String },
     sortOrder: { type: Number, default: 1 },
   },
   { _id: true },
@@ -16,8 +16,8 @@ const boqItemSchema = new mongoose.Schema(
 const boqSectionSchema = new mongoose.Schema(
   {
     sectionName: { type: String, required: true },
-    sectionId: { type: String }, // optional if you want custom id
-    items: [boqItemSchema], // items grouped under this section
+    sectionId: { type: String }, 
+    items: [boqItemSchema], 
   },
   { _id: true },
 );
