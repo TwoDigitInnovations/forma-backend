@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest --clearCache && jest --coverage",
-    "start": "pm2 start server.js -i max -f  --name 'forma_backend'",
+    "start": "pm2 start src/server.js -i max -f  --name 'forma_backend'",
     "kill": "pm2 kill forma_backend",
     "logs": "pm2 log forma_backend",
     "restart": "pm2 restart forma_backend",
