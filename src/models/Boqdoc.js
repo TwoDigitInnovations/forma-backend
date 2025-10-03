@@ -28,6 +28,7 @@ const boqSchema = new mongoose.Schema(
         unit: { type: String },
         quantity: { type: Number, default: 0 },
         rate: { type: Number, default: 0 },
+        rowType: { type: String},
         amount: { type: Number, default: 0 },
       },
     ],
