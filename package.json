@@ -5,12 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "jest --clearCache && jest --coverage",
-    "start": "pm2 start src/server.js -i max -f",
+    "start": "pm2 start server.js -i max -f  --name ‘forma_backend'",
+    "kill": "pm2 kill forma_backend",
+    "logs": "pm2 log forma_backend",
+    "restart": "pm2 restart forma_backend",
     "dev": "cross-env NODE_ENV=development nodemon src/server.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "prettier": "prettier --write .",
-    "restart": "pm2 restart all --update-env",
     "prettier:check": "prettier --check .",
     "format": "npm run prettier && npm run lint:fix",
     "build": "npm run prettier && npm run lint:fix"
