@@ -1,48 +1,57 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const boqItemSchema = new mongoose.Schema(
   {
-    itemNo: { type: String, required: true }, 
-    itemType: { type: String, enum: ['item', 'subitem'], default: 'item' },
+    itemNo: { type: String,  },
     description: { type: String, required: true },
     quantity: { type: String },
     unit: { type: String },
     rate: { type: String },
-    sortOrder: { type: Number, default: 1 },
+    rowType: { type: String },
   },
-  { _id: true },
+  { _id: true }
+);
+
+const boqSubSectionSchema = new mongoose.Schema(
+  {
+    subSectionName: { type: String, required: true },
+    subSectionId: { type: String },
+    items: [boqItemSchema], 
+  },
+  { _id: true }
 );
 
 const boqSectionSchema = new mongoose.Schema(
   {
-    sectionName: { type: String, required: true },
-    sectionId: { type: String }, 
+    sectionName: { type: String },
+    sectionId: { type: String },
+    description: { type: String },
     items: [boqItemSchema], 
+    subSections: [boqSubSectionSchema], 
   },
-  { _id: true },
+  { _id: true }
 );
 
 const boqTemplateSchema = new mongoose.Schema(
   {
     projectId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Project',
+      ref: "Project",
     },
     categoryName: { type: String, required: true },
     categoryId: { type: String },
     name: { type: String, required: true },
     description: { type: String },
-    isPublic: { type: Boolean, default: false },
     sections: [boqSectionSchema],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-boqTemplateSchema.set('toJSON', {
+boqTemplateSchema.set("toJSON", {
   getters: true,
   virtuals: false,
   transform: (doc, ret) => {
@@ -51,5 +60,5 @@ boqTemplateSchema.set('toJSON', {
   },
 });
 
-const Template = mongoose.model('Template', boqTemplateSchema);
+const Template = mongoose.model("Template", boqTemplateSchema);
 module.exports = Template;
