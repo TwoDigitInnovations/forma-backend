@@ -95,6 +95,27 @@ const TemplateController = {
       return response.error(res, error.message || 'Failed to delete template');
     }
   },
+  getAllTemplates: async (req, res) => {
+    try {
+
+      const templates = await Template.find();
+
+      if (!templates || templates.length === 0) {
+        return res.status(404).json({
+          status: false,
+          message: 'No templates found for this project',
+        });
+      }
+
+      return response.ok(res, {
+        message: 'Templates fetched successfully',
+        data: templates,
+      });
+    } catch (error) {
+      console.error('Get templates error:', error);
+      return response.error(res, error.message || 'Failed to fetch templates');
+    }
+  },
 };
 
 module.exports = TemplateController;
