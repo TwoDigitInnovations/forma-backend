@@ -17,6 +17,10 @@ router.delete(
   TemplateController.deleteTemplate,
 );
 
-router.get("/getAllTemplates", authenticate, TemplateController.getAllTemplates)
+router.get(
+  '/getAllTemplates',
+  authenticate,
+  TemplateController.getAllTemplates,
+);
 
 module.exports = router;

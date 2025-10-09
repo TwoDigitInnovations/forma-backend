@@ -97,7 +97,6 @@ const TemplateController = {
   },
   getAllTemplates: async (req, res) => {
     try {
-
       const templates = await Template.find();
 
       if (!templates || templates.length === 0) {

@@ -20,5 +20,6 @@ export default defineConfig([
       sourceType: 'commonjs',
     },
   },
+
   pluginReact.configs.flat.recommended,
 ]);

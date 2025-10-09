@@ -1,24 +1,24 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const boqItemSchema = new mongoose.Schema(
   {
-    itemNo: { type: String,  },
+    itemNo: { type: String },
     description: { type: String, required: true },
     quantity: { type: String },
     unit: { type: String },
     rate: { type: String },
-    rowType: { type: String },
+    rowType: { type: String, default: "normal" },
   },
-  { _id: true }
+  { _id: true },
 );
 
 const boqSubSectionSchema = new mongoose.Schema(
   {
     subSectionName: { type: String, required: true },
     subSectionId: { type: String },
-    items: [boqItemSchema], 
+    items: [boqItemSchema],
   },
-  { _id: true }
+  { _id: true },
 );
 
 const boqSectionSchema = new mongoose.Schema(
@@ -26,17 +26,17 @@ const boqSectionSchema = new mongoose.Schema(
     sectionName: { type: String },
     sectionId: { type: String },
     description: { type: String },
-    items: [boqItemSchema], 
-    subSections: [boqSubSectionSchema], 
+    items: [boqItemSchema],
+    subSections: [boqSubSectionSchema],
   },
-  { _id: true }
+  { _id: true },
 );
 
 const boqTemplateSchema = new mongoose.Schema(
   {
     projectId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Project",
+      ref: 'Project',
     },
     categoryName: { type: String, required: true },
     categoryId: { type: String },
@@ -45,13 +45,13 @@ const boqTemplateSchema = new mongoose.Schema(
     sections: [boqSectionSchema],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-boqTemplateSchema.set("toJSON", {
+boqTemplateSchema.set('toJSON', {
   getters: true,
   virtuals: false,
   transform: (doc, ret) => {
@@ -60,5 +60,5 @@ boqTemplateSchema.set("toJSON", {
   },
 });
 
-const Template = mongoose.model("Template", boqTemplateSchema);
+const Template = mongoose.model('Template', boqTemplateSchema);
 module.exports = Template;
