@@ -63,19 +63,6 @@ module.exports = {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
-      if (user.role === 'Seller') {
-        if (user.status === 'pending') {
-          return res.status(403).json({
-            message: 'Please wait until your account is verified by admin.',
-          });
-        }
-        if (user.status === 'suspend') {
-          return res.status(403).json({
-            message: 'Your account has been suspended. Contact support.',
-          });
-        }
-      }
-
       const token = jwt.sign(
         { id: user._id, email: user.email, role: user.role },
         process.env.JWT_SECRET,

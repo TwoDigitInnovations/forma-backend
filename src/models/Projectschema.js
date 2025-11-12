@@ -7,6 +7,9 @@ const projectSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    projectNo: {
+      type: String,
+    },
     ProviderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -19,22 +22,26 @@ const projectSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    ExcuetiveSummary: {
+      type: String,
+      trim: true,
+    },
+    LocationSummary: {
+      type: String,
+      trim: true,
+    },
     location: {
       type: String,
       trim: true,
     },
     projectType: {
       type: String,
-      enum: ['Commercial', 'Residential', 'Industrial', 'Infrastructure'],
-      default: 'Commercial',
     },
     status: {
       type: String,
       enum: ['Planning', 'In Progress', 'On Hold', 'Completed', 'Cancelled'],
       default: 'Planning',
     },
-
-    // Contract Information
     contractAmount: {
       type: Number,
       min: 0,
@@ -49,43 +56,37 @@ const projectSchema = new mongoose.Schema(
     endDate: {
       type: Date,
     },
+    Duration: {
+      type: String,
+    },
+    LiabilityPeriod: {
+      type: String,
+    },
     actualEndDate: {
       type: Date,
       default: null,
     },
 
-    // Stakeholder Information
     clientInfo: {
-      contactAmount: {
-        type: Number,
-        min: 0,
-      },
-      projectBudget: {
-        type: Number,
-        min: 0,
-      },
-      clientLogo: {
-        type: String,
-        default: null,
-      },
+      ClientName: { type: String, trim: true },
+      Email: { type: String, trim: true },
+      phone: { type: String, trim: true },
+      contactPerson: { type: String, trim: true },
+      Address: { type: String, trim: true },
+      ClientLogo: { type: String, default: null },
+      teamMembers: [],
     },
 
     contractorInfo: {
-      contractorName: {
-        type: String,
-
-        trim: true,
-      },
-      contractorAddress: {
-        type: String,
-
-        trim: true,
-      },
-      contractorLogo: {
-        type: String,
-        default: null,
-      },
+      contractorName: { type: String, trim: true },
+      Email: { type: String, trim: true },
+      phone: { type: String, trim: true },
+      contactPerson: { type: String, trim: true },
+      contractorLogo: { type: String, default: null },
+      teamMembers: [],
+      equipment: [],
     },
+
     isActive: {
       type: Boolean,
       default: true,
@@ -104,6 +105,7 @@ const projectSchema = new mongoose.Schema(
   },
 );
 
+// Remove __v before sending response
 projectSchema.set('toJSON', {
   getters: true,
   virtuals: false,
@@ -114,5 +116,4 @@ projectSchema.set('toJSON', {
 });
 
 const Project = mongoose.model('Project', projectSchema);
-
 module.exports = Project;

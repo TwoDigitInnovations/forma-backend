@@ -28,6 +28,7 @@ const projectController = {
         message: 'Project created successfully',
         data: newProject,
       });
+
     } catch (error) {
       console.error('Create project error:', error);
       return response.error(res, error.message || 'Failed to create project');
@@ -118,7 +119,6 @@ const projectController = {
     try {
       const { id } = req.params;
       const payload = req?.body || {};
-
       const project = await Project.findById(id);
 
       if (!project || !project.isActive) {
