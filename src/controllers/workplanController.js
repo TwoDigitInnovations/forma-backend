@@ -38,7 +38,7 @@ const workplanController = {
                 : {};
             query.owner = req.user.id;
             query.projectId = projectId;
-        
+
             const total = await WorkPlan.countDocuments(query);
 
             const plans = await WorkPlan.find(query)
@@ -111,12 +111,13 @@ const workplanController = {
     addActivity: async (req, res) => {
         try {
             const { planId } = req.params;
-            const newActivity = req.body;
 
+            const { workActivities } = req.body;
+            console.log(planId, workActivities);
             const plan = await WorkPlan.findById(planId);
-            if (!plan) return response.error(res, 'Plan not found');
+            if (!plan) return response.error(res, 'work Plan not found');
 
-            plan.workActivities.push(newActivity);
+            plan.workActivities = workActivities;
             await plan.save();
 
             return response.ok(res, {
