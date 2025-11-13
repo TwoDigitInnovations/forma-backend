@@ -30,7 +30,6 @@ const workActivitySchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
-
 const workPlanSchema = new mongoose.Schema(
     {
         planName: {
