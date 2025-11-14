@@ -266,6 +266,119 @@ const projectController = {
       );
     }
   },
+  updatePaidAmount: async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const { paidAmount } = req.body;
+
+      const project = await Project.findById(projectId);
+      if (!project) return response.error(res, "Project not found");
+
+      project.paidAmount += Number(paidAmount);
+      await project.save();
+
+      return response.ok(res, {
+        message: "Paid amount updated successfully",
+        data: project.paidAmount
+      });
+    } catch (error) {
+      console.error("Update paid amount error:", error);
+      return response.error(
+        res,
+        error.message || "Failed to update paid amount"
+      );
+    }
+  },
+  updateCertificateStatus: async (req, res) => {
+    try {
+      const { certId, projectId } = req.params;
+      const { status } = req.body;
+
+      const project = await Project.findById(projectId);
+      if (!project) return response.error(res, "Project not found");
+
+      const cert = project.certificates.id(certId);
+      if (!cert) return response.error(res, "Certificate not found");
+
+      cert.status = status;
+      await project.save();
+
+      return response.ok(res, {
+        message: "Certificate status updated successfully",
+        data: cert
+      });
+    } catch (error) {
+      console.error("Certificate status update error:", error);
+      return response.error(
+        res,
+        error.message || "Failed to update certificate status"
+      );
+    }
+  },
+  addCertificate: async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const { certificateNo, amount, date } = req.body;
+
+      if (!amount || amount <= 0) {
+        return response.error(res, "Certificate amount must be greater than zero");
+      }
+
+      const project = await Project.findById(projectId);
+      if (!project) return response.error(res, "Project not found");
+
+      project.certificates.push({
+        certificateNo,
+        amount,
+        date,
+        status: "Submitted"
+      });
+
+      await project.save();
+
+      return response.ok(res, {
+        message: "Certificate added successfully",
+        data: project.certificates
+      });
+    } catch (error) {
+      console.error("Add certificate error:", error);
+      return response.error(res, error.message || "Failed to add certificate");
+    }
+  },
+  updateAdvancePayment: async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      let { advanceAmount } = req.body;
+
+      advanceAmount = Number(advanceAmount);
+
+      console.log("Parsed advanceAmount:", advanceAmount);
+
+      if (isNaN(advanceAmount) || advanceAmount <= 0) {
+        return response.error(res, "Advance amount must be a valid number greater than zero");
+      }
+
+      const project = await Project.findById(projectId);
+      if (!project) return response.error(res, "Project not found");
+
+      const currentPaid = Number(project.paidAmount) || 0;
+
+      project.paidAmount = currentPaid + advanceAmount;
+
+      await project.save();
+
+      return response.ok(res, {
+        message: "Advance payment added successfully",
+        data: project
+      });
+
+    } catch (error) {
+      console.error("Advance payment error:", error);
+      return response.error(res, error.message || "Failed to add advance payment");
+    }
+  },
+
+
 };
 
 module.exports = projectController;

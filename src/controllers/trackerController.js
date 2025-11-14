@@ -38,7 +38,7 @@ const trackerController = {
                 .populate('WorkplanId')
                 .populate('owner')
                 .sort({ createdAt: -1 });
-        
+
             return response.ok(res, trackers);
         } catch (error) {
             console.error('Get All Tracker Error:', error);
@@ -63,27 +63,29 @@ const trackerController = {
         }
     },
 
-
-    // 🟣 UPDATE Tracker
     updateTracker: async (req, res) => {
         try {
             const { id } = req.params;
+            const { trackerActivityProgress } = req.body;
 
-            const updatedTracker = await tracker.findByIdAndUpdate(id, req.body, {
-                new: true,
-            });
+            const updatedTracker = await tracker.findById(id);
 
-            if (!updatedTracker) return response.error(res, 'Tracker not found');
+            if (!updatedTracker)
+                return response.error(res, 'Tracker not found');
+            updatedTracker.trackerActivityProgress = trackerActivityProgress;
+            await updatedTracker.save();
 
             return response.ok(res, {
                 message: 'Tracker updated successfully',
                 data: updatedTracker,
             });
+
         } catch (error) {
             console.error('Update Tracker Error:', error);
             return response.error(res, error.message || 'Failed to update tracker');
         }
     },
+
 
 
 

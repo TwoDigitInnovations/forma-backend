@@ -22,6 +22,7 @@ const trackerSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
         },
+        trackerActivityProgress: [],
     },
     { timestamps: true }
 );
