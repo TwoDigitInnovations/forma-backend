@@ -28,5 +28,5 @@ const trackerSchema = new mongoose.Schema(
 );
 
 
-const WorkPlan = mongoose.model('Tracker', trackerSchema);
-module.exports = WorkPlan;
+const Tracker = mongoose.model('Tracker', trackerSchema);
+module.exports = Tracker;

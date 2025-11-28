@@ -13,27 +13,38 @@ router.post('/updateProjectStatus', authenticate, Project.updateProjectStatus);
 router.delete('deleteProject/:id', authenticate, Project.deleteProject);
 
 router.post(
-    "/update-advance-payment/:projectId",
-    authenticate,
-    Project.updateAdvancePayment
+  '/update-advance-payment/:projectId',
+  authenticate,
+  Project.updateAdvancePayment,
+);
+
+router.post('/addCertificate/:projectId', authenticate, Project.addCertificate);
+
+router.post(
+  '/update-certificate-status/:certId/:projectId',
+  authenticate,
+  Project.updateCertificateStatus,
 );
 
 router.post(
-    "/addCertificate/:projectId",
-    authenticate,
-    Project.addCertificate
+  '/update-payment-paid/:projectId',
+  authenticate,
+  Project.updatePaidAmount,
 );
 
 router.post(
-    "/update-certificate-status/:certId/:projectId",
-    authenticate,
-    Project.updateCertificateStatus
+  '/updateCertificates/:projectId/:certificateId',
+  Project.updateCertificate,
 );
 
-router.post(
-    "/update-payment-paid/:projectId",
-    authenticate,
-    Project.updatePaidAmount
+router.get(
+  '/getCertificate/:projectId/:certificateId',
+  Project.getCertificateById,
 );
+router.delete(
+  '/deleteCertificate/:projectId/:certificateId',
+  Project.deleteCertificate,
+);
+
 
 module.exports = router;

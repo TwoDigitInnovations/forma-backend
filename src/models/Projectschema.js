@@ -54,6 +54,10 @@ const projectSchema = new mongoose.Schema(
       type: Number,
       min: 0,
     },
+    advancePayment: {
+      type: Number,
+      min: 0,
+    },
     startDate: {
       type: Date,
     },
@@ -75,8 +79,12 @@ const projectSchema = new mongoose.Schema(
         certificateNo: String,
         amount: Number,
         date: Date,
-        status: { type: String, enum: ["Submitted", "In-Process", "Paid",], default: "Submitted" }
-      }
+        status: {
+          type: String,
+          enum: ['Submitted', 'In-Process', 'Paid'],
+          default: 'Submitted',
+        },
+      },
     ],
 
     clientInfo: {

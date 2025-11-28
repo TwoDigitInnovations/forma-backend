@@ -28,7 +28,6 @@ const projectController = {
         message: 'Project created successfully',
         data: newProject,
       });
-
     } catch (error) {
       console.error('Create project error:', error);
       return response.error(res, error.message || 'Failed to create project');
@@ -272,20 +271,20 @@ const projectController = {
       const { paidAmount } = req.body;
 
       const project = await Project.findById(projectId);
-      if (!project) return response.error(res, "Project not found");
+      if (!project) return response.error(res, 'Project not found');
 
       project.paidAmount += Number(paidAmount);
       await project.save();
 
       return response.ok(res, {
-        message: "Paid amount updated successfully",
-        data: project.paidAmount
+        message: 'Paid amount updated successfully',
+        data: project.paidAmount,
       });
     } catch (error) {
-      console.error("Update paid amount error:", error);
+      console.error('Update paid amount error:', error);
       return response.error(
         res,
-        error.message || "Failed to update paid amount"
+        error.message || 'Failed to update paid amount',
       );
     }
   },
@@ -295,23 +294,23 @@ const projectController = {
       const { status } = req.body;
 
       const project = await Project.findById(projectId);
-      if (!project) return response.error(res, "Project not found");
+      if (!project) return response.error(res, 'Project not found');
 
       const cert = project.certificates.id(certId);
-      if (!cert) return response.error(res, "Certificate not found");
+      if (!cert) return response.error(res, 'Certificate not found');
 
       cert.status = status;
       await project.save();
 
       return response.ok(res, {
-        message: "Certificate status updated successfully",
-        data: cert
+        message: 'Certificate status updated successfully',
+        data: cert,
       });
     } catch (error) {
-      console.error("Certificate status update error:", error);
+      console.error('Certificate status update error:', error);
       return response.error(
         res,
-        error.message || "Failed to update certificate status"
+        error.message || 'Failed to update certificate status',
       );
     }
   },
@@ -321,28 +320,31 @@ const projectController = {
       const { certificateNo, amount, date } = req.body;
 
       if (!amount || amount <= 0) {
-        return response.error(res, "Certificate amount must be greater than zero");
+        return response.error(
+          res,
+          'Certificate amount must be greater than zero',
+        );
       }
 
       const project = await Project.findById(projectId);
-      if (!project) return response.error(res, "Project not found");
+      if (!project) return response.error(res, 'Project not found');
 
       project.certificates.push({
         certificateNo,
         amount,
         date,
-        status: "Submitted"
+        status: 'Submitted',
       });
 
       await project.save();
 
       return response.ok(res, {
-        message: "Certificate added successfully",
-        data: project.certificates
+        message: 'Certificate added successfully',
+        data: project.certificates,
       });
     } catch (error) {
-      console.error("Add certificate error:", error);
-      return response.error(res, error.message || "Failed to add certificate");
+      console.error('Add certificate error:', error);
+      return response.error(res, error.message || 'Failed to add certificate');
     }
   },
   updateAdvancePayment: async (req, res) => {
@@ -352,32 +354,144 @@ const projectController = {
 
       advanceAmount = Number(advanceAmount);
 
-      console.log("Parsed advanceAmount:", advanceAmount);
-
       if (isNaN(advanceAmount) || advanceAmount <= 0) {
-        return response.error(res, "Advance amount must be a valid number greater than zero");
+        return response.error(
+          res,
+          'Advance amount must be a valid number greater than zero',
+        );
       }
 
       const project = await Project.findById(projectId);
-      if (!project) return response.error(res, "Project not found");
+      if (!project) return response.error(res, 'Project not found');
 
-      const currentPaid = Number(project.paidAmount) || 0;
+      // OLD advance amount (if any)
+      const oldAdvance = Number(project.advancePayment) || 0;
 
-      project.paidAmount = currentPaid + advanceAmount;
+      // TOTAL paid amount
+      const oldPaid = Number(project.paidAmount) || 0;
+
+      /**
+       *  👉 LOGIC:
+       *  If advance was already added before:
+       *    - Remove OLD advance from paid
+       *    - Add NEW advance to paid
+       */
+
+      const newPaidAmount = oldPaid - oldAdvance + advanceAmount;
+
+      project.advancePayment = advanceAmount; // update latest advance amount
+      project.paidAmount = newPaidAmount; // fix total paid
 
       await project.save();
 
       return response.ok(res, {
-        message: "Advance payment added successfully",
-        data: project
+        message: 'Advance payment updated successfully',
+        data: project,
       });
-
     } catch (error) {
-      console.error("Advance payment error:", error);
-      return response.error(res, error.message || "Failed to add advance payment");
+      console.error('Advance payment error:', error);
+      return response.error(
+        res,
+        error.message || 'Failed to update advance payment',
+      );
     }
   },
 
+  getCertificateById: async (req, res) => {
+    try {
+      const { projectId, certificateId } = req.params;
+
+      const project = await Project.findById(projectId);
+      if (!project) return response.error(res, 'Project not found');
+
+      const certificate = project.certificates.id(certificateId);
+      if (!certificate) return response.error(res, 'Certificate not found');
+
+      return response.ok(res, {
+        message: 'Certificate details fetched successfully',
+        data: certificate,
+      });
+    } catch (error) {
+      console.error('Get certificate error:', error);
+      return response.error(
+        res,
+        error.message || 'Failed to fetch certificate details',
+      );
+    }
+  },
+
+  updateCertificate: async (req, res) => {
+    try {
+      const { projectId, certificateId } = req.params;
+      const { certificateNo, amount, date, status } = req.body;
+
+      const project = await Project.findById(projectId);
+      if (!project) return response.error(res, 'Project not found');
+
+      const certificate = project.certificates.id(certificateId);
+      if (!certificate) return response.error(res, 'Certificate not found');
+
+      if (certificateNo !== undefined)
+        certificate.certificateNo = certificateNo;
+      if (amount !== undefined) certificate.amount = amount;
+      if (status !== undefined) certificate.status = status;
+      if (date !== undefined) certificate.date = date;
+
+      await project.save();
+
+      return response.ok(res, {
+        message: 'Certificate updated successfully',
+        data: certificate,
+      });
+    } catch (error) {
+      console.error('Update certificate error:', error);
+      return response.error(
+        res,
+        error.message || 'Failed to update certificate',
+      );
+    }
+  },
+
+  deleteCertificate: async (req, res) => {
+    try {
+      const { projectId, certificateId } = req.params;
+
+      const project = await Project.findById(projectId);
+      if (!project) return response.error(res, 'Project not found');
+
+      // Find certificate
+      const cert = project.certificates.find(
+        (c) => c._id.toString() === certificateId,
+      );
+
+      if (!cert) return response.error(res, 'Certificate not found');
+
+      // Remove certificate
+      project.certificates = project.certificates.filter(
+        (c) => c._id.toString() !== certificateId,
+      );
+
+      // 🧮 Update paidAmount if certificate was "Paid"
+      if (cert.status === 'Paid') {
+        project.paidAmount =
+          Number(project.paidAmount || 0) - Number(cert.amount);
+        if (project.paidAmount < 0) project.paidAmount = 0; // safety
+      }
+
+      await project.save();
+
+      return response.ok(res, {
+        message: 'Certificate deleted successfully',
+        data: project.certificates,
+      });
+    } catch (error) {
+      console.error('Delete certificate error:', error);
+      return response.error(
+        res,
+        error.message || 'Failed to delete certificate',
+      );
+    }
+  },
 
 };
 
