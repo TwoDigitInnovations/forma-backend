@@ -7,9 +7,11 @@ const checkList = require('../src/routes/checkListRoute');
 const actionPoints = require('../src/routes/actionPointsRoutes');
 const dailylogs = require('../src/routes/logsRoute');
 const documents = require('../src/routes/documentsRoute');
+const userRoutes = require('../src/routes/userRoutes');
 
 module.exports = (app) => {
   app.use('/auth', authRoutes);
+  app.use('/user',userRoutes)
   app.use('/project', projectRoutes);
   app.use('/workplan', planRoutes);
   app.use('/tracker', trackerRoutes);

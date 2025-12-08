@@ -14,7 +14,7 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'macheGlobal_uploads',
+    folder: 'forma',
     public_id: (req, file) => {
       const fileBaseName = path.basename(
         file.originalname,
@@ -27,7 +27,7 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 1 * 1024 * 1024 },
 });
 
 module.exports = upload;
