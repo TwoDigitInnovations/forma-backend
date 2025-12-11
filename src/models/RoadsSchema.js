@@ -16,7 +16,6 @@ const RoadsSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-
     lengthKm: {
       type: Number,
       required: true,
