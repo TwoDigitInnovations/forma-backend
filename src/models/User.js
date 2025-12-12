@@ -31,7 +31,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['User', 'Admin', 'Provider'], // Define user roles
+      enum: ['User', 'Organization', 'TeamsMember', 'Admin'], // Define user roles
       default: 'User',
     },
     status: {
@@ -43,6 +43,20 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    billingType: {
+      type: String,
+      enum: ['annually', 'monthly'],
+    },
+    OrganizationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    assignedProjects: [
+      {
+        projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+        actionType: { type: String, enum: ['view', 'edit', 'both'] },
+      },
+    ],
   },
   { timestamps: true },
 );

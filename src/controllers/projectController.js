@@ -1,12 +1,12 @@
 const Project = require('../models/Projectschema');
 const response = require('./../../responses');
+const User = require('@models/User');
 
 const projectController = {
   createProject: async (req, res) => {
     try {
       const payload = req?.body || {};
-      payload.createdBy = req.user?.id || req.userId;
-      payload.ProviderId = req.user?.id || req.userId;
+      payload.OrganizationId = req.user?.id || req.userId;
 
       const existingProject = await Project.findOne({
         projectName: payload.projectName,
@@ -46,8 +46,8 @@ const projectController = {
         filter.status = req.query.status;
       }
 
-      if (req.query.projectType) {
-        filter.projectType = req.query.projectType;
+      if (req.query.OrganizationId) {
+        filter.OrganizationId = req.query.OrganizationId;
       }
 
       if (req.query.search) {
@@ -64,8 +64,7 @@ const projectController = {
       }
 
       const projects = await Project.find(filter)
-        .populate('createdBy', 'name email')
-        .populate('updatedBy', 'name email')
+        .populate('OrganizationId')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
@@ -126,16 +125,13 @@ const projectController = {
           message: 'Project not found',
         });
       }
-      payload.updatedBy = req.user?.id || req.userId;
-      payload.ProviderId = req.user?.id || req.userId;
+      payload.OrganizationId = req.user?.id || req.userId;
 
       const updatedProject = await Project.findByIdAndUpdate(
         id,
         { $set: payload },
         { new: true, runValidators: true },
-      )
-        .populate('createdBy', 'name email')
-        .populate('updatedBy', 'name email');
+      ).populate('OrganizationId');
 
       return response.ok(res, {
         message: 'Project updated successfully',
@@ -183,7 +179,7 @@ const projectController = {
 
       const updateData = {
         status,
-        updatedBy: req.user?.id || req.userId,
+        OrganizationId: req.user?.id || req.userId,
       };
 
       const updatedProject = await Project.findByIdAndUpdate(
@@ -492,7 +488,64 @@ const projectController = {
       );
     }
   },
+  assignProjectToMember: async (req, res) => {
+    try {
+      const { projectId, memberId, actionType } = req.body;
+      const organizationId = req.user?.id;
 
+      if (!projectId || !memberId || !actionType) {
+        return response.error(res, 'Missing required fields');
+      }
+
+      const member = await User.findById(memberId);
+      if (!member) return response.error(res, 'Team member not found');
+
+      if (member.role !== 'TeamsMember')
+        return response.error(res, 'This user is not a Team Member');
+
+      if (String(member.OrganizationId) !== String(organizationId))
+        return response.error(
+          res,
+          'Unauthorized: This member belongs to another organization',
+        );
+
+      const project = await Project.findById(projectId);
+      if (!project) return response.error(res, 'Project not found');
+
+      const isAlreadyInProject = project.assignedMembers?.some(
+        (m) => String(m.memberId) === String(memberId),
+      );
+
+      if (isAlreadyInProject)
+        return response.error(res, 'Member already assigned to this project');
+
+      const isAlreadyInUser = member.assignedProjects?.some(
+        (p) => String(p.projectId) === String(projectId),
+      );
+
+      if (isAlreadyInUser)
+        return response.error(res, 'Project already added for this member');
+
+      project.assignedMembers.push({
+        memberId,
+        actionType,
+      });
+      await project.save();
+
+      member.assignedProjects.push({
+        projectId,
+        actionType,
+      });
+      await member.save();
+
+      return response.ok(res, {
+        message: 'Project assigned to member successfully',
+      });
+    } catch (error) {
+      console.error('Assign project error:', error);
+      return response.error(res, error.message || 'Failed to assign project');
+    }
+  },
 };
 
 module.exports = projectController;

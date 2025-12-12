@@ -10,7 +10,7 @@ const projectSchema = new mongoose.Schema(
     projectNo: {
       type: String,
     },
-    ProviderId: {
+    OrganizationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
@@ -111,14 +111,16 @@ const projectSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
+    assignedMembers: [
+      {
+        memberId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        actionType: {
+          type: String,
+          enum: ['view', 'edit', 'both'],
+          default: 'view',
+        },
+      },
+    ],
   },
   {
     timestamps: true,

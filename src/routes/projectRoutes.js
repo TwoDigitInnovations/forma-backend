@@ -45,6 +45,10 @@ router.delete(
   '/deleteCertificate/:projectId/:certificateId',
   Project.deleteCertificate,
 );
-
+router.post(
+  '/assignProjectToMember',
+  authenticate,
+  Project.assignProjectToMember,
+);
 
 module.exports = router;

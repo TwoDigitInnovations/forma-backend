@@ -4,13 +4,14 @@ const jwt = require('jsonwebtoken');
 const response = require('../../responses');
 const Verification = require('@models/verification');
 const userHelper = require('../helper/user');
+const Project = require('../models/Projectschema');
 // const mailNotification = require('./../services/mailNotification');
 
 module.exports = {
   register: async (req, res) => {
     try {
       const { name, email, password, phone, role } = req.body;
-      console.log('📩 Incoming body:', req.body);
+
       if (password.length < 6) {
         return res
           .status(400)
@@ -31,12 +32,19 @@ module.exports = {
         role,
       });
 
+      if (role === 'TeamsMember') {
+        newUser.OrganizationId = req.user?.id;
+        console.log(req.user?.id);
+        console.log(newUser);
+      }
+
+      console.log(req.user?.id);
+      console.log(newUser);
+
       await newUser.save();
       const userResponse = await User.findById(newUser._id).select('-password');
 
-      res
-        .status(201)
-        .json({ message: 'registered successfully', user: userResponse });
+      return response.ok(res, userResponse);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Server error' });
@@ -284,4 +292,76 @@ module.exports = {
       return response.error(res, error.message || 'Something went wrong');
     }
   },
+  getAllTeamMembers: async (req, res) => {
+    try {
+      const organizationId = req.user?.id;
+
+      if (!organizationId) {
+        return response.error(res, 'Unauthorized: Organization ID not found');
+      }
+
+      const filter = {
+        role: 'TeamsMember',
+        OrganizationId: organizationId,
+      };
+      console.log(filter);
+
+      const members = await User.find(filter)
+        .populate('OrganizationId')
+        .sort({ createdAt: -1 });
+
+      return response.ok(res, {
+        message: 'Team members fetched successfully',
+        data: members,
+      });
+    } catch (error) {
+      console.error('Get team members error:', error);
+      return response.error(
+        res,
+        error.message || 'Failed to fetch Team Members',
+      );
+    }
+  },
+  deleteTeamMember: async (req, res) => {
+    try {
+      const organizationId = req.user?.id;
+      const memberId = req.params.deleteId;
+
+      const member = await User.findById(memberId);
+
+      if (!member) {
+        return response.error(res, 'Team member not found');
+      }
+
+      if (member.role !== 'TeamsMember') {
+        return response.error(res, 'This user is not a Team Member');
+      }
+
+      if (String(member.OrganizationId) !== String(organizationId)) {
+        return response.error(
+          res,
+          'Unauthorized: This member belongs to another organization',
+        );
+      }
+
+      await Project.updateMany(
+        { assignedMembers: memberId },
+        { $pull: { assignedMembers: memberId } },
+      );
+
+      await User.findByIdAndDelete(memberId);
+
+      return response.ok(res, {
+        message:
+          'Team member deleted successfully and removed from all assigned projects',
+      });
+    } catch (error) {
+      console.error('Delete team member error:', error);
+      return response.error(
+        res,
+        error.message || 'Failed to delete team member',
+      );
+    }
+  },
+
 };
