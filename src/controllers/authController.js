@@ -308,6 +308,10 @@ module.exports = {
 
       const members = await User.find(filter)
         .populate('OrganizationId')
+        .populate({
+          path: 'assignedProjects.projectId',
+          model: 'Project', 
+        })
         .sort({ createdAt: -1 });
 
       return response.ok(res, {
@@ -363,5 +367,4 @@ module.exports = {
       );
     }
   },
-
 };
