@@ -31,12 +31,12 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['User', 'Organization', 'TeamsMember', 'Admin'], // Define user roles
+      enum: ['User', 'Organization', 'TeamsMember', 'Admin'],
       default: 'User',
     },
     status: {
       type: String,
-      enum: ['pending', 'verified', 'suspend'], // Define user roles
+      enum: ['pending', 'verified', 'suspend'], 
       default: 'pending',
     },
     createdAt: {
@@ -46,6 +46,12 @@ const userSchema = new mongoose.Schema(
     billingType: {
       type: String,
       enum: ['annually', 'monthly'],
+    },
+    teamSize: {
+      trype: String,
+    },
+    organizationName: {
+      type: String,
     },
     OrganizationId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -57,6 +63,38 @@ const userSchema = new mongoose.Schema(
         actionType: { type: String, enum: ['view', 'edit', 'both'] },
       },
     ],
+    subscription: {
+      planId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'PricingPlan',
+      },
+
+      planName: String,
+
+      status: {
+        type: String,
+        enum: ['trial', 'active', 'expired', 'cancelled'],
+        default: 'trial',
+      },
+
+      billingType: {
+        type: String,
+        enum: ['monthly', 'annually'],
+      },
+
+      teamSize: Number,
+
+      trialStartDate: Date,
+      trialEndDate: Date,
+
+      planStartDate: Date,
+      planEndDate: Date,
+
+      autoRenew: {
+        type: Boolean,
+        default: false,
+      },
+    },
   },
   { timestamps: true },
 );

@@ -91,8 +91,7 @@ const projectController = {
     try {
       console.log(req?.params?.id);
       const project = await Project.findById(req?.params?.id)
-        .populate('createdBy', 'name email')
-        .populate('updatedBy', 'name email');
+        .populate('OrganizationId')
 
       console.log(project);
 
@@ -488,6 +487,7 @@ const projectController = {
       );
     }
   },
+
   assignProjectToMember: async (req, res) => {
     try {
       const { projectId, memberId, actionType } = req.body;

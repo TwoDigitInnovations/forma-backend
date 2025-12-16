@@ -10,9 +10,10 @@ const Project = require('../models/Projectschema');
 module.exports = {
   register: async (req, res) => {
     try {
-      const { name, email, password, phone, role } = req.body;
+      const { name, email, password, phone, role, organizationName, teamSize } =
+        req.body;
 
-      if (password.length < 6) {
+      if (!password || password.length < 6) {
         return res
           .status(400)
           .json({ message: 'Password must be at least 6 characters long' });
@@ -24,30 +25,60 @@ module.exports = {
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
+
+      let subscriptionData = null;
+
+      if (role === 'User') {
+        const trialDays = 14;
+        const now = new Date();
+
+        subscriptionData = {
+          status: 'trial',
+          trialStartDate: now,
+          trialEndDate: new Date(new Date().setDate(now.getDate() + trialDays)),
+        };
+      }
+
+      if (role === 'Organization') {
+        const trialDays = 14;
+        const now = new Date();
+
+        subscriptionData = {
+          status: 'trial',
+          trialStartDate: now,
+          teamSize: teamSize,
+          trialEndDate: new Date(new Date().setDate(now.getDate() + trialDays)),
+        };
+      }
+
       const newUser = new User({
         name,
         email,
         password: hashedPassword,
         phone,
         role,
+        subscription: subscriptionData,
       });
 
+      if (role === 'Organization') {
+        newUser.organizationName = organizationName;
+      } 
+      
       if (role === 'TeamsMember') {
         newUser.OrganizationId = req.user?.id;
-        console.log(req.user?.id);
-        console.log(newUser);
       }
 
-      console.log(req.user?.id);
-      console.log(newUser);
-
       await newUser.save();
+
       const userResponse = await User.findById(newUser._id).select('-password');
 
-      return response.ok(res, userResponse);
+      return response.ok(res, {
+        message: 'Registration successful. Free trial started.',
+        user: userResponse,
+      });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: 'Server error' });
+      return res.status(500).json({ message: 'Server error' });
     }
   },
 
@@ -66,16 +97,56 @@ module.exports = {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
+      if (user.status === 'suspend') {
+        return res.status(403).json({
+          message: 'Your account has been suspended.',
+        });
+      }
+
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
+      if (
+        (user.role === 'User' || user.role === 'Organization') &&
+        user.subscription?.status === 'trial'
+      ) {
+        if (new Date() > new Date(user.subscription.trialEndDate)) {
+          user.subscription.status = 'expired';
+          await user.save();
+
+          return res.status(403).json({
+            message: 'Your free trial has expired. Please upgrade.',
+            trialExpired: true,
+          });
+        }
+      }
+
+      if (
+        (user.role === 'User' || user.role === 'Organization') &&
+        user.subscription?.status === 'active'
+      ) {
+        if (
+          user.subscription.endDate &&
+          new Date() > new Date(user.subscription.endDate)
+        ) {
+          user.subscription.status = 'expired';
+          await user.save();
+
+          return res.status(403).json({
+            message: 'Your subscription has expired. Please renew.',
+          });
+        }
+      }
+
       const token = jwt.sign(
-        { id: user._id, email: user.email, role: user.role },
+        { id: user._id, role: user.role },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN },
       );
+
+      user.password = undefined;
 
       return response.ok(res, {
         message: 'Login successful',
@@ -310,7 +381,7 @@ module.exports = {
         .populate('OrganizationId')
         .populate({
           path: 'assignedProjects.projectId',
-          model: 'Project', 
+          model: 'Project',
         })
         .sort({ createdAt: -1 });
 
