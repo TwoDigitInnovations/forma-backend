@@ -120,94 +120,81 @@ const roadsController = {
       const { roadId, layerId } = req.params;
       const payload = req.body;
 
+     
       const road = await Roads.findOne({
         _id: roadId,
         'constructionLayers._id': layerId,
       });
 
-      if (!road) return response.error(res, 'Road or Layer not found');
 
-      const layer = road.constructionLayers.find(
-        (lay) => lay._id.toString() === layerId,
-      );
 
-      let updatedSides = [...layer.sides];
 
-      if (payload.carriageway === 'Left') {
-        const leftIndex = updatedSides.findIndex(
-          (s) => s.side.toLowerCase() === 'left',
-        );
 
-        const newLeft = {
-          side: 'Left',
-          StartChainageKM: payload.StartChainageKM,
-          EndChainageKM: payload.EndChainageKM,
-        };
 
-        if (leftIndex !== -1) {
-          updatedSides[leftIndex] = newLeft;
-        } else {
-          updatedSides.push(newLeft);
-        }
-      } else if (payload.carriageway === 'Right') {
-        const rightIndex = updatedSides.findIndex(
-          (s) => s.side.toLowerCase() === 'right',
-        );
-
-        const newRight = {
-          side: 'Right',
-          StartChainageKM: payload.StartChainageKM,
-          EndChainageKM: payload.EndChainageKM,
-        };
-
-        if (rightIndex !== -1) {
-          updatedSides[rightIndex] = newRight;
-        } else {
-          updatedSides.push(newRight);
-        }
-      } else {
-        updatedSides = [
-          {
-            side: 'Single',
-            StartChainageKM: payload.StartChainageKM,
-            EndChainageKM: payload.EndChainageKM,
-          },
-        ];
+      if (!road) {
+        return response.error(res, 'Road or Layer not found');
       }
 
-      const historyEntry = {
-        start: payload.StartChainageKM,
-        end: payload.EndChainageKM,
-        date: new Date(),
-      };
+      const layer = road.constructionLayers.find(
+        (l) => l._id.toString() === layerId.toString(),
+      );
+
+      if (!layer) {
+        return response.error(res, 'Layer not found');
+      }
+
+      let updatedSides = layer.sides.map((s) => s.toObject());
+
+      const normalize = (v = '') => v.toString().trim().toLowerCase();
+      const sideKey = normalize(payload.side); 
 
       let sideIndex = updatedSides.findIndex(
-        (s) =>
-          s.side.toLowerCase() === payload.carriageway?.toLowerCase() ||
-          s.side.toLowerCase() === 'single',
+        (s) => normalize(s.side) === sideKey,
       );
 
       if (sideIndex !== -1) {
-        if (!updatedSides[sideIndex].history) {
-          updatedSides[sideIndex].history = [];
-        }
-
-        updatedSides[sideIndex].history.push(historyEntry);
+        updatedSides[sideIndex].StartChainageKM = payload.StartChainageKM;
+        updatedSides[sideIndex].EndChainageKM = payload.EndChainageKM;
+      } else {
+        updatedSides.push({
+          side: payload.side,
+          StartChainageKM: payload.StartChainageKM,
+          EndChainageKM: payload.EndChainageKM,
+          history: [],
+        });
+        sideIndex = updatedSides.length - 1;
+      }
+      if (!updatedSides[sideIndex].history) {
+        updatedSides[sideIndex].history = [];
       }
 
+      updatedSides[sideIndex].history.push({
+        start: payload.StartChainageKM,
+        end: payload.EndChainageKM,
+        date: payload.CompletionDate || new Date(),
+      });
+
+      // 6️⃣ Update DB
       const updatedRoad = await Roads.findOneAndUpdate(
         {
           _id: roadId,
           'constructionLayers._id': layerId,
         },
         {
-          $set: { 'constructionLayers.$.sides': updatedSides },
+          $set: {
+            'constructionLayers.$.sides': updatedSides,
+          },
         },
         { new: true },
       );
 
+      if (!updatedRoad) {
+        return response.error(res, 'Failed to update layer');
+      }
+
+      // 7️⃣ Get updated layer
       const updatedLayer = updatedRoad.constructionLayers.find(
-        (l) => l._id.toString() === layerId,
+        (l) => l._id.toString() === layerId.toString(),
       );
 
       return response.ok(res, {
