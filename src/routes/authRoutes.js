@@ -16,7 +16,7 @@ const { authenticate } = require('@middlewares/authMiddleware');
 const router = express.Router();
 
 router.post('/login', login);
-router.post('/register', authenticate, register);
+router.post('/register', register);
 router.post('/profile', authenticate, getUser);
 router.post('/sendOTP', sendOTP);
 router.post('/updateProfile', updateProfile);

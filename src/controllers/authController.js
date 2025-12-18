@@ -10,8 +10,7 @@ const Project = require('../models/Projectschema');
 module.exports = {
   register: async (req, res) => {
     try {
-      const { name, email, password, phone, role, organizationName, teamSize } =
-        req.body;
+      const { name, email, password, phone, role, userId } = req.body;
 
       if (!password || password.length < 6) {
         return res
@@ -26,46 +25,16 @@ module.exports = {
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      let subscriptionData = null;
-
-      if (role === 'User') {
-        const trialDays = 14;
-        const now = new Date();
-
-        subscriptionData = {
-          status: 'trial',
-          trialStartDate: now,
-          trialEndDate: new Date(new Date().setDate(now.getDate() + trialDays)),
-        };
-      }
-
-      if (role === 'Organization') {
-        const trialDays = 14;
-        const now = new Date();
-
-        subscriptionData = {
-          status: 'trial',
-          trialStartDate: now,
-          teamSize: teamSize,
-          trialEndDate: new Date(new Date().setDate(now.getDate() + trialDays)),
-        };
-      }
-
       const newUser = new User({
         name,
         email,
         password: hashedPassword,
         phone,
         role,
-        subscription: subscriptionData,
       });
 
-      if (role === 'Organization') {
-        newUser.organizationName = organizationName;
-      } 
-      
       if (role === 'TeamsMember') {
-        newUser.OrganizationId = req.user?.id;
+        newUser.OrganizationId = userId;
       }
 
       await newUser.save();
@@ -73,7 +42,7 @@ module.exports = {
       const userResponse = await User.findById(newUser._id).select('-password');
 
       return response.ok(res, {
-        message: 'Registration successful. Free trial started.',
+        message: 'Registration successful.',
         user: userResponse,
       });
     } catch (error) {
@@ -106,38 +75,6 @@ module.exports = {
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
         return res.status(401).json({ message: 'Invalid credentials' });
-      }
-
-      if (
-        (user.role === 'User' || user.role === 'Organization') &&
-        user.subscription?.status === 'trial'
-      ) {
-        if (new Date() > new Date(user.subscription.trialEndDate)) {
-          user.subscription.status = 'expired';
-          await user.save();
-
-          return res.status(403).json({
-            message: 'Your free trial has expired. Please upgrade.',
-            trialExpired: true,
-          });
-        }
-      }
-
-      if (
-        (user.role === 'User' || user.role === 'Organization') &&
-        user.subscription?.status === 'active'
-      ) {
-        if (
-          user.subscription.endDate &&
-          new Date() > new Date(user.subscription.endDate)
-        ) {
-          user.subscription.status = 'expired';
-          await user.save();
-
-          return res.status(403).json({
-            message: 'Your subscription has expired. Please renew.',
-          });
-        }
       }
 
       const token = jwt.sign(
@@ -363,6 +300,7 @@ module.exports = {
       return response.error(res, error.message || 'Something went wrong');
     }
   },
+
   getAllTeamMembers: async (req, res) => {
     try {
       const organizationId = req.user?.id;
@@ -397,6 +335,7 @@ module.exports = {
       );
     }
   },
+  
   deleteTeamMember: async (req, res) => {
     try {
       const organizationId = req.user?.id;

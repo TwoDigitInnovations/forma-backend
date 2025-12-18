@@ -8,6 +8,7 @@ const actionPoints = require('../src/routes/actionPointsRoutes');
 const dailylogs = require('../src/routes/logsRoute');
 const documents = require('../src/routes/documentsRoute');
 const userRoutes = require('../src/routes/userRoutes');
+const PricePlanRoutes = require('../src/routes/PricePlanRoutes');
 
 module.exports = (app) => {
   app.use('/auth', authRoutes);
@@ -19,5 +20,7 @@ module.exports = (app) => {
   app.use('/checklist', checkList);
   app.use('/action-Point', actionPoints);
   app.use('/dailylogs', dailylogs);
-  app.use('/documents',documents)
+  app.use('/documents',documents);
+  app.use('/price-plan',PricePlanRoutes);
+  
 };

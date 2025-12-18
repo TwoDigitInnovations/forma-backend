@@ -36,7 +36,7 @@ const userSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'verified', 'suspend'], 
+      enum: ['pending', 'verified', 'suspend'],
       default: 'pending',
     },
     createdAt: {
@@ -83,9 +83,6 @@ const userSchema = new mongoose.Schema(
       },
 
       teamSize: Number,
-
-      trialStartDate: Date,
-      trialEndDate: Date,
 
       planStartDate: Date,
       planEndDate: Date,
