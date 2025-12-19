@@ -1,4 +1,6 @@
 const PricingPlan = require('../models/PricingPlanSchema');
+const Payment = require('../models/PaymentSchema');
+const User = require('@models/User');
 const response = require('../../responses');
 
 const PricingPlanController = {
@@ -65,9 +67,9 @@ const PricingPlanController = {
 
   getPlanById: async (req, res) => {
     try {
-      const { id } = req.params;
+      const { planId } = req.params;
 
-      const plan = await PricingPlan.findById(id);
+      const plan = await PricingPlan.findById(planId);
 
       if (!plan) {
         return response.notFound(res, {
@@ -75,9 +77,7 @@ const PricingPlanController = {
         });
       }
 
-      return response.ok(res, {
-        data: plan,
-      });
+      return response.ok(res, plan);
     } catch (error) {
       console.error('Get Plan Error:', error);
       return response.error(res, error.message || 'Something went wrong');
@@ -88,7 +88,7 @@ const PricingPlanController = {
     try {
       const plans = await PricingPlan.find({ isActive: true }).sort({
         priceMonthly: 1,
-      }); 
+      });
 
       return response.ok(res, {
         message: 'Pricing plans fetched successfully',
@@ -97,6 +97,96 @@ const PricingPlanController = {
     } catch (error) {
       console.error('Get All Plans Error:', error);
       return response.error(res, error.message || 'Something went wrong');
+    }
+  },
+
+  buyPlan: async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { planId, billingType, teamSize, paymentMethod, transactionId ,role } =
+        req.body;
+
+      if (!planId || !billingType || !teamSize) {
+        return response.error(res, { message: 'Required fields missing' });
+      }
+
+      const user = await User.findById(userId).select('subscription');
+      if (!user) {
+        return response.error(res, { message: 'User not found' });
+      }
+
+      if (user.subscription && user.subscription.status === 'active') {
+        const isExpired =
+          !user.subscription.planEndDate ||
+          new Date(user.subscription.planEndDate) <= new Date();
+
+        if (!isExpired) {
+          return response.error(res, {
+            message: 'You already have an active subscription',
+          });
+        }
+
+        return response.error(res, {
+          message: 'Your plan has expired. Please renew from billing',
+        });
+      }
+
+      const plan = await PricingPlan.findById(planId);
+      if (!plan || !plan.isActive) {
+        return response.error(res, { message: 'Plan not available' });
+      }
+
+      let amount = 0;
+      if (billingType === 'monthly') {
+        amount = plan.priceMonthly * teamSize;
+      } else if (billingType === 'annually') {
+        amount = plan.priceYearly * teamSize;
+      } else {
+        return response.error(res, { message: 'Invalid billing type' });
+      }
+
+      const planStartDate = new Date();
+      const planEndDate = new Date();
+
+      if (billingType === 'monthly') {
+        planEndDate.setMonth(planEndDate.getMonth() + 1);
+      } else {
+        planEndDate.setFullYear(planEndDate.getFullYear() + 1);
+      }
+
+      const payment = await Payment.create({
+        userId,
+        planId,
+        amount,
+        currency: plan.currency,
+        billingType,
+        paymentMethod,
+        paymentStatus: 'success',
+        transactionId: transactionId || `DEMO_${Date.now()}`,
+        paidAt: new Date(),
+      });
+
+      await User.findByIdAndUpdate(userId, {
+        subscription: {
+          planId: plan._id,
+          planName: plan.name,
+          status: 'active',
+          billingType,
+          teamSize,
+          planStartDate,
+          planEndDate,
+          autoRenew: false,
+          role: role || 'User',
+        },
+      });
+
+      return response.ok(res, {
+        message: 'Plan purchased successfully',
+        payment,
+      });
+    } catch (error) {
+      console.error('Buy Plan Error:', error);
+      return response.error(res, error.message || 'Failed to buy plan');
     }
   },
 };

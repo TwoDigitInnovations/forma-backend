@@ -8,11 +8,6 @@ const pricingPlanSchema = new mongoose.Schema(
       unique: true,
     },
 
-    teamSize: {
-      type: Number,
-      required: true,
-    },
-
     projectLimit: {
       type: Number, // kitne projects create kar sakta hai
       required: true,
