@@ -103,8 +103,14 @@ const PricingPlanController = {
   buyPlan: async (req, res) => {
     try {
       const userId = req.user.id;
-      const { planId, billingType, teamSize, paymentMethod, transactionId ,role } =
-        req.body;
+      const {
+        planId,
+        billingType,
+        teamSize,
+        paymentMethod,
+        transactionId,
+        role,
+      } = req.body;
 
       if (!planId || !billingType || !teamSize) {
         return response.error(res, { message: 'Required fields missing' });
@@ -166,23 +172,30 @@ const PricingPlanController = {
         paidAt: new Date(),
       });
 
-      await User.findByIdAndUpdate(userId, {
-        subscription: {
-          planId: plan._id,
-          planName: plan.name,
-          status: 'active',
-          billingType,
-          teamSize,
-          planStartDate,
-          planEndDate,
-          autoRenew: false,
-          role: role || 'User',
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        {
+          subscription: {
+            planId: plan._id,
+            planName: plan.name,
+            status: 'active',
+            billingType,
+            teamSize,
+            planStartDate,
+            planEndDate,
+            autoRenew: false,
+          },
+          ...(role && { role }),
         },
-      });
+        {
+          new: true,
+          runValidators: true,
+        },
+      );
 
       return response.ok(res, {
-        message: 'Plan purchased successfully',
-        payment,
+        message: 'Subscription updated successfully',
+        user: updatedUser,
       });
     } catch (error) {
       console.error('Buy Plan Error:', error);
