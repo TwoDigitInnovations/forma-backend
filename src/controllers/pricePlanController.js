@@ -196,6 +196,7 @@ const PricingPlanController = {
       return response.ok(res, {
         message: 'Subscription updated successfully',
         user: updatedUser,
+        payment: payment,
       });
     } catch (error) {
       console.error('Buy Plan Error:', error);

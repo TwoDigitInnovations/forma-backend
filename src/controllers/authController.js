@@ -51,50 +51,61 @@ module.exports = {
     }
   },
 
-  login: async (req, res) => {
-    try {
-      const { email, password } = req.body;
+login: async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-      if (!email || !password) {
-        return res
-          .status(400)
-          .json({ message: 'Email and password are required' });
-      }
-
-      const user = await User.findOne({ email });
-      if (!user) {
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
-
-      if (user.status === 'suspend') {
-        return res.status(403).json({
-          message: 'Your account has been suspended.',
-        });
-      }
-
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
-
-      const token = jwt.sign(
-        { id: user._id, role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN },
-      );
-
-      user.password = undefined;
-
-      return response.ok(res, {
-        message: 'Login successful',
-        token,
-        user,
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: 'Server error' });
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
     }
-  },
+
+    // 1️⃣ Pehle normal user fetch
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    if (user.status === "suspend") {
+      return res.status(403).json({
+        message: "Your account has been suspended.",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // 2️⃣ Sirf TeamsMember ke liye Organization populate
+    if (user.role === "TeamsMember" && user.OrganizationId) {
+      user = await User.findById(user._id)
+        .populate("OrganizationId")
+        .select("-password");
+    } else {
+      user.password = undefined;
+    }
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
+
+    return response.ok(res, {
+      message: "Login successful",
+      token,
+      user,
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+},
+
 
   getUser: async (req, res) => {
     try {
@@ -304,6 +315,7 @@ module.exports = {
   getAllTeamMembers: async (req, res) => {
     try {
       const organizationId = req.user?.id;
+      const search = req.query.search || '';
 
       if (!organizationId) {
         return response.error(res, 'Unauthorized: Organization ID not found');
@@ -313,14 +325,16 @@ module.exports = {
         role: 'TeamsMember',
         OrganizationId: organizationId,
       };
-      console.log(filter);
+
+      if (search) {
+        filter.$or = [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+        ];
+      }
 
       const members = await User.find(filter)
         .populate('OrganizationId')
-        .populate({
-          path: 'assignedProjects.projectId',
-          model: 'Project',
-        })
         .sort({ createdAt: -1 });
 
       return response.ok(res, {
@@ -335,7 +349,7 @@ module.exports = {
       );
     }
   },
-  
+
   deleteTeamMember: async (req, res) => {
     try {
       const organizationId = req.user?.id;

@@ -57,12 +57,6 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
-    assignedProjects: [
-      {
-        projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
-        actionType: { type: String, enum: ['view', 'edit', 'both'] },
-      },
-    ],
     subscription: {
       planId: {
         type: mongoose.Schema.Types.ObjectId,
