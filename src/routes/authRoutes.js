@@ -24,5 +24,5 @@ router.post('/verifyOTP', verifyOTP);
 router.post('/changePassword', changePassword);
 router.post('/changePasswordfromAdmin', authenticate, changePasswordfromAdmin);
 router.get('/getAllTeamMembers', authenticate, getAllTeamMembers);
-router.delete('/deleteTeamMember', authenticate, deleteTeamMember);
+router.delete('/deleteTeamMember/deleteId', authenticate, deleteTeamMember);
 module.exports = router;

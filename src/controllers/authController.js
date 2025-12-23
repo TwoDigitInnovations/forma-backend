@@ -393,11 +393,6 @@ module.exports = {
         );
       }
 
-      await Project.updateMany(
-        { assignedMembers: memberId },
-        { $pull: { assignedMembers: memberId } },
-      );
-
       await User.findByIdAndDelete(memberId);
 
       return response.ok(res, {
