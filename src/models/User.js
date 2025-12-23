@@ -77,7 +77,10 @@ const userSchema = new mongoose.Schema(
       },
 
       teamSize: Number,
-
+      usedTeamsSize: {
+        type: Number,
+        default: 0,
+      },
       planStartDate: Date,
       planEndDate: Date,
 

@@ -13,17 +13,38 @@ module.exports = {
       const { name, email, password, phone, role, userId } = req.body;
 
       if (!password || password.length < 6) {
-        return res
-          .status(400)
-          .json({ message: 'Password must be at least 6 characters long' });
+        return response.error(res, {
+          message: `Password must be at least 6 characters long`,
+        });
       }
 
       const existingUser = await User.findOne({ email });
       if (existingUser) {
-        return res.status(400).json({ message: 'User already exists' });
+        return response.error(res, {
+          message: `User already exists`,
+        });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
+
+      let organization = null;
+
+      if (role === 'TeamsMember') {
+        organization = await User.findById(userId);
+
+        if (!organization) {
+          return res.status(400).json({ message: 'Organization not found' });
+        }
+
+        if (
+          organization.teamSize &&
+          organization.usedTeamsSize >= organization.teamSize
+        ) {
+          return response.error(res, {
+            message: `Team size limit exceeded. Maximum allowed is ${organization.teamSize}`,
+          });
+        }
+      }
 
       const newUser = new User({
         name,
@@ -31,18 +52,20 @@ module.exports = {
         password: hashedPassword,
         phone,
         role,
+        OrganizationId: organization ? organization._id : null,
       });
 
-      if (role === 'TeamsMember') {
-        newUser.OrganizationId = userId;
-      }
-
       await newUser.save();
+
+      if (organization) {
+        organization.usedTeamsSize = (organization.usedTeamsSize || 0) + 1;
+        await organization.save();
+      }
 
       const userResponse = await User.findById(newUser._id).select('-password');
 
       return response.ok(res, {
-        message: 'Registration successful.',
+        message: 'Registration successful',
         user: userResponse,
       });
     } catch (error) {
@@ -51,61 +74,59 @@ module.exports = {
     }
   },
 
-login: async (req, res) => {
-  try {
-    const { email, password } = req.body;
+  login: async (req, res) => {
+    try {
+      const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Email and password are required" });
-    }
+      if (!email || !password) {
+        return res
+          .status(400)
+          .json({ message: 'Email and password are required' });
+      }
 
-    // 1️⃣ Pehle normal user fetch
-    let user = await User.findOne({ email });
+      // 1️⃣ Pehle normal user fetch
+      let user = await User.findOne({ email });
 
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
 
-    if (user.status === "suspend") {
-      return res.status(403).json({
-        message: "Your account has been suspended.",
+      if (user.status === 'suspend') {
+        return res.status(403).json({
+          message: 'Your account has been suspended.',
+        });
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      // 2️⃣ Sirf TeamsMember ke liye Organization populate
+      if (user.role === 'TeamsMember' && user.OrganizationId) {
+        user = await User.findById(user._id)
+          .populate('OrganizationId')
+          .select('-password');
+      } else {
+        user.password = undefined;
+      }
+
+      const token = jwt.sign(
+        { id: user._id, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN },
+      );
+
+      return response.ok(res, {
+        message: 'Login successful',
+        token,
+        user,
       });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Server error' });
     }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // 2️⃣ Sirf TeamsMember ke liye Organization populate
-    if (user.role === "TeamsMember" && user.OrganizationId) {
-      user = await User.findById(user._id)
-        .populate("OrganizationId")
-        .select("-password");
-    } else {
-      user.password = undefined;
-    }
-
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN }
-    );
-
-    return response.ok(res, {
-      message: "Login successful",
-      token,
-      user,
-    });
-
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Server error" });
-  }
-},
-
+  },
 
   getUser: async (req, res) => {
     try {
