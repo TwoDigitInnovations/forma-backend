@@ -10,6 +10,9 @@ const {
   changePasswordfromAdmin,
   getAllTeamMembers,
   deleteTeamMember,
+  createInviteLink,
+  acceptInvite,
+  signupWithInvite,
 } = require('@controllers/authController');
 const { authenticate } = require('@middlewares/authMiddleware');
 
@@ -25,4 +28,7 @@ router.post('/changePassword', changePassword);
 router.post('/changePasswordfromAdmin', authenticate, changePasswordfromAdmin);
 router.get('/getAllTeamMembers', authenticate, getAllTeamMembers);
 router.delete('/deleteTeamMember/deleteId', authenticate, deleteTeamMember);
+router.get('/acceptInvite/:token', acceptInvite);
+router.post('/createInviteLink', authenticate, createInviteLink);
+router.post('/signupWithInvite', signupWithInvite);
 module.exports = router;

@@ -6,11 +6,13 @@ const Verification = require('@models/verification');
 const userHelper = require('../helper/user');
 const Project = require('../models/Projectschema');
 // const mailNotification = require('./../services/mailNotification');
+const crypto = require('crypto');
+const Invite = require('../models/InviteSchema');
 
 module.exports = {
   register: async (req, res) => {
     try {
-      const { name, email, password, phone, role, userId } = req.body;
+      const { name, email, password, phone, role } = req.body;
 
       if (!password || password.length < 6) {
         return response.error(res, {
@@ -27,40 +29,15 @@ module.exports = {
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      let organization = null;
-
-      if (role === 'TeamsMember') {
-        organization = await User.findById(userId);
-
-        if (!organization) {
-          return res.status(400).json({ message: 'Organization not found' });
-        }
-
-        if (
-          organization.teamSize &&
-          organization.usedTeamsSize >= organization.teamSize
-        ) {
-          return response.error(res, {
-            message: `Team size limit exceeded. Maximum allowed is ${organization.teamSize}`,
-          });
-        }
-      }
-
       const newUser = new User({
         name,
         email,
         password: hashedPassword,
         phone,
         role,
-        OrganizationId: organization ? organization._id : null,
       });
 
       await newUser.save();
-
-      if (organization) {
-        organization.usedTeamsSize = (organization.usedTeamsSize || 0) + 1;
-        await organization.save();
-      }
 
       const userResponse = await User.findById(newUser._id).select('-password');
 
@@ -405,6 +382,136 @@ module.exports = {
         res,
         error.message || 'Failed to delete team member',
       );
+    }
+  },
+
+  createInviteLink: async (req, res) => {
+    try {
+      const { email, organizationId } = req.body;
+      if (!email || !organizationId) {
+        return response.error(res, {
+          message: 'Email and organizationId are required',
+        });
+      }
+
+      const token = crypto.randomBytes(32).toString('hex');
+
+      await Invite.create({
+        email,
+        organizationId,
+        token,
+        invitedBy: req.user.id,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+      });
+
+      const inviteLink = `${process.env.FRONTEND_URL}/acceptInvite?token=${token}`;
+
+      // await sendMail(email, inviteLink);
+
+      return response.ok(res, {
+        message: 'Invite link sent successfully',
+        inviteLink,
+      });
+    } catch (error) {
+      console.error(error);
+      return response.error(res, {
+        message: 'Server error while creating invite link',
+      });
+    }
+  },
+  acceptInvite: async (req, res) => {
+    try {
+      const { token } = req.query;
+
+      if (!token) {
+        return response.error(res, {
+          message: 'Invite token is required',
+        });
+      }
+
+      const invite = await Invite.findOne({
+        token,
+        isUsed: false,
+        expiresAt: { $gt: new Date() },
+      });
+
+      if (!invite) {
+        return response.error(res, {
+          message: 'Invite link expired or invalid',
+        });
+      }
+
+      return response.ok(res, {
+        email: invite.email,
+        organizationId: invite.organizationId,
+        inviteId: invite._id,
+      });
+    } catch (error) {
+      console.error(error);
+      return response.error(res, {
+        message: 'Server error while validating invite',
+      });
+    }
+  },
+  signupWithInvite: async (req, res) => {
+    try {
+      const { inviteId, password, name, phone } = req.body;
+
+      const invite = await Invite.findById(inviteId);
+
+      if (!invite || invite.isUsed || invite.expiresAt < new Date()) {
+        return response.error(res, {
+          message: 'Invite link is invalid or expired',
+        });
+      }
+
+      const organization = await User.findById(invite.organizationId);
+
+      if (!organization) {
+        return response.error(res, {
+          message: 'Organization not found',
+        });
+      }
+
+      if (
+        organization.teamSize &&
+        organization.usedTeamsSize >= organization.teamSize
+      ) {
+        return response.error(res, {
+          message: `Team size limit exceeded. Maximum allowed is ${organization.teamSize}`,
+        });
+      }
+
+      const user = await User.create({
+        name,
+        email: invite.email,
+        password,
+        phone,
+        organizationId: invite.organizationId,
+        role: 'TeamMember',
+      });
+
+      invite.isUsed = true;
+      await invite.save();
+
+      organization.usedTeamsSize = (organization.usedTeamsSize || 0) + 1;
+      await organization.save();
+
+      return response.ok(res, {
+        message: 'Signup successful',
+        user: {
+          _id: user._id,
+          email: user.email,
+          role: user.role,
+          organizationId: user.organizationId,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      return response.error(res, {
+        message: 'Server error',
+        error: error.message,
+      });
     }
   },
 };
