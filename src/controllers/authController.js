@@ -65,7 +65,7 @@ module.exports = {
       let user = await User.findOne({ email });
 
       if (!user) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ message: 'User not Found' });
       }
 
       if (user.status === 'suspend') {
@@ -76,10 +76,9 @@ module.exports = {
 
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ message: 'Password is incorrect' });
       }
 
-      // 2️⃣ Sirf TeamsMember ke liye Organization populate
       if (user.role === 'TeamsMember' && user.OrganizationId) {
         user = await User.findById(user._id)
           .populate('OrganizationId')
@@ -107,7 +106,7 @@ module.exports = {
 
   getUser: async (req, res) => {
     try {
-      const { userId } = req.body;
+      const userId = req.user.id;
 
       if (!userId) {
         return res
@@ -350,7 +349,7 @@ module.exports = {
 
   deleteTeamMember: async (req, res) => {
     try {
-      const organizationId = req.user?.id;
+      const organizationId = req.body?.id;
       const memberId = req.params.deleteId;
 
       const member = await User.findById(memberId);
@@ -455,13 +454,20 @@ module.exports = {
   },
   signupWithInvite: async (req, res) => {
     try {
-      const { inviteId, password, name, phone } = req.body;
+      const { inviteId, password, name, phone, role } = req.body;
 
       const invite = await Invite.findById(inviteId);
 
       if (!invite || invite.isUsed || invite.expiresAt < new Date()) {
         return response.error(res, {
           message: 'Invite link is invalid or expired',
+        });
+      }
+
+      const existingUser = await User.findOne({ email: invite.email });
+      if (existingUser) {
+        return response.error(res, {
+          message: 'Email already exists',
         });
       }
 
@@ -487,15 +493,19 @@ module.exports = {
         email: invite.email,
         password,
         phone,
-        organizationId: invite.organizationId,
-        role: 'TeamMember',
+        OrganizationId: invite.organizationId,
+        role,
+        status: 'pending',
       });
 
       invite.isUsed = true;
       await invite.save();
 
-      organization.usedTeamsSize = (organization.usedTeamsSize || 0) + 1;
-      await organization.save();
+      await User.findByIdAndUpdate(
+        invite.organizationId,
+        { $inc: { 'subscription.usedTeamsSize': 1 } },
+        { new: true },
+      );
 
       return response.ok(res, {
         message: 'Signup successful',
@@ -503,7 +513,55 @@ module.exports = {
           _id: user._id,
           email: user.email,
           role: user.role,
-          organizationId: user.organizationId,
+          organizationId: user.OrganizationId,
+          status: user.status,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      return response.error(res, {
+        message: 'Server error',
+        error: error.message,
+      });
+    }
+  },
+
+  updateUserStatus: async (req, res) => {
+    try {
+      const { userId, status } = req.body;
+      const organizationId = req.user?.id;
+
+      if (!userId || !status) {
+        return response.error(res, {
+          message: 'User ID and status are required',
+        });
+      }
+
+      if (!['verified', 'suspend'].includes(status)) {
+        return response.error(res, {
+          message: 'Invalid status value',
+        });
+      }
+
+      const user = await User.findOne({
+        _id: userId,
+        OrganizationId: organizationId,
+      });
+
+      if (!user) {
+        return response.error(res, {
+          message: 'User not found or does not belong to your organization',
+        });
+      }
+
+      user.status = status;
+      await user.save();
+
+      return response.ok(res, {
+        message: `User ${status} successfully`,
+        user: {
+          _id: user._id,
+          status: user.status,
         },
       });
     } catch (error) {

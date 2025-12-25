@@ -2,7 +2,7 @@ const authService = require('@services/authService');
 
 module.exports = {
   authenticate: (req, res, next) => {
-    const token = req.headers['authorization']?.split(' ')[1];
+    const token = req.headers.authorization?.split(' ')[1];
 
     if (!token) {
       return res.status(401).json({ message: 'No token provided' });
@@ -13,9 +13,13 @@ module.exports = {
       req.user = decoded;
       next();
     } catch (error) {
-      return res
-        .status(403)
-        .json({ message: error.message || 'Invalid token' });
+      if (error.name === 'TokenExpiredError') {
+        return res
+          .status(401)
+          .json({ message: 'Token expired, please login again' });
+      }
+
+      return res.status(403).json({ message: 'Invalid token' });
     }
   },
 };

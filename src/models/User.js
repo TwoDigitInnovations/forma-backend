@@ -67,8 +67,7 @@ const userSchema = new mongoose.Schema(
 
       status: {
         type: String,
-        enum: ['trial', 'active', 'expired', 'cancelled'],
-        default: 'trial',
+        enum: ['active', 'expired', 'cancelled'],
       },
 
       billingType: {
