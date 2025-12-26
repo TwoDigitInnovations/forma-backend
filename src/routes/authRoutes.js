@@ -1,37 +1,47 @@
 const express = require('express');
-const {
-  login,
-  register,
-  getUser,
-  sendOTP,
-  verifyOTP,
-  changePassword,
-  updateProfile,
-  changePasswordfromAdmin,
-  getAllTeamMembers,
-  deleteTeamMember,
-  createInviteLink,
-  acceptInvite,
-  signupWithInvite,
-  updateUserStatus,
-} = require('@controllers/authController');
+const authController = require('@controllers/authController');
 const { authenticate } = require('@middlewares/authMiddleware');
 
 const router = express.Router();
 
-router.post('/login', login);
-router.post('/register', register);
-router.get('/profile', authenticate, getUser);
-router.post('/sendOTP', sendOTP);
-router.post('/updateProfile', updateProfile);
-router.post('/verifyOTP', verifyOTP);
-router.post('/changePassword', changePassword);
-router.post('/changePasswordfromAdmin', authenticate, changePasswordfromAdmin);
-router.get('/getAllTeamMembers', authenticate, getAllTeamMembers);
-router.delete('/deleteTeamMember/:deleteId', deleteTeamMember);
-router.get('/acceptInvite', acceptInvite);
-router.post('/createInviteLink', authenticate, createInviteLink);
-router.post('/signupWithInvite', signupWithInvite);
-router.patch('/update-user-status', authenticate, updateUserStatus);
+router.post('/login', authController.login);
+router.post('/register', authController.register);
+router.get('/profile', authenticate, authController.getUser);
+router.post('/sendOTP', authController.sendOTP);
+router.post('/updateProfile', authController.updateProfile);
+router.post('/verifyOTP', authController.verifyOTP);
+router.post('/changePassword', authController.changePassword);
+router.post(
+  '/changePasswordfromAdmin',
+  authenticate,
+  authController.changePasswordfromAdmin,
+);
+router.get(
+  '/getAllTeamMembers',
+  authenticate,
+  authController.getAllTeamMembers,
+);
+router.delete('/deleteTeamMember/:deleteId', authController.deleteTeamMember);
+router.get('/acceptInvite', authController.acceptInvite);
+router.post('/createInviteLink', authenticate, authController.createInviteLink);
+router.post('/signupWithInvite', authController.signupWithInvite);
+router.patch(
+  '/update-user-status',
+  authenticate,
+  authController.updateUserStatus,
+);
+router.get('/paymenthistory', authController.getPaymentHistory);
+
+router.post(
+  '/cancelSubscription',
+  authenticate,
+  authController.cancelSubscription,
+);
+router.post(
+  '/resumeSubscription',
+  authenticate,
+  authController.resumeSubscription,
+);
+router.post('/toggleAutoRenew', authenticate, authController.toggleAutoRenew);
 
 module.exports = router;

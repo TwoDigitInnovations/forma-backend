@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const response = require('../../responses');
 const Verification = require('@models/verification');
 const userHelper = require('../helper/user');
-const Project = require('../models/Projectschema');
+const Payment = require('../models/PaymentSchema');
 // const mailNotification = require('./../services/mailNotification');
 const crypto = require('crypto');
 const Invite = require('../models/InviteSchema');
@@ -56,27 +56,45 @@ module.exports = {
       const { email, password } = req.body;
 
       if (!email || !password) {
-        return res
-          .status(400)
-          .json({ message: 'Email and password are required' });
+        return response.error(res, {
+          message: `Email and password are required`,
+        });
       }
 
-      // 1️⃣ Pehle normal user fetch
       let user = await User.findOne({ email });
 
       if (!user) {
-        return res.status(401).json({ message: 'User not Found' });
+        return response.error(res, {
+          message: `User not Found`,
+        });
+      }
+
+      if (user.role === 'TeamsMember' && user.status === 'pending') {
+        return response.error(res, {
+          message:
+            'Your account is pending approval. Please wait for your organization to approve your access.',
+        });
+      }
+
+      if (user.role === 'TeamsMember' && user.status === 'suspend') {
+        return response.error(res, {
+          message:
+            'Your account has been suspended. Please contact your organization for assistance.',
+        });
       }
 
       if (user.status === 'suspend') {
-        return res.status(403).json({
-          message: 'Your account has been suspended.',
+        return response.error(res, {
+          message: 'Your account has been suspended. Please contact your Admin',
         });
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
+
       if (!isMatch) {
-        return res.status(401).json({ message: 'Password is incorrect' });
+        return response.error(res, {
+          message: `Password is incorrect`,
+        });
       }
 
       if (user.role === 'TeamsMember' && user.OrganizationId) {
@@ -86,6 +104,8 @@ module.exports = {
       } else {
         user.password = undefined;
       }
+
+      console.log(user);
 
       const token = jwt.sign(
         { id: user._id, role: user.role },
@@ -106,20 +126,25 @@ module.exports = {
 
   getUser: async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
 
       if (!userId) {
-        return res
-          .status(400)
-          .json({ status: false, message: 'User ID is required' });
+        return res.status(400).json({
+          status: false,
+          message: 'User ID is required',
+        });
       }
 
-      const user = await User.findById(userId).select('-password');
+      let query = User.findById(userId).select('-password');
+
+      query = query.populate('OrganizationId');
+      const user = await query;
 
       if (!user) {
-        return res
-          .status(404)
-          .json({ status: false, message: 'User not found' });
+        return res.status(404).json({
+          status: false,
+          message: 'User not found',
+        });
       }
 
       res.status(200).json({
@@ -352,6 +377,10 @@ module.exports = {
       const organizationId = req.body?.id;
       const memberId = req.params.deleteId;
 
+      if (!organizationId || !memberId) {
+        return response.error(res, 'Organization ID and Member ID required');
+      }
+
       const member = await User.findById(memberId);
 
       if (!member) {
@@ -369,11 +398,25 @@ module.exports = {
         );
       }
 
+      const organization = await User.findById(organizationId);
+
+      if (!organization) {
+        return response.error(res, 'Organization not found');
+      }
+
       await User.findByIdAndDelete(memberId);
+
+      if (
+        organization.subscription &&
+        organization.subscription.usedTeamSize > 0
+      ) {
+        organization.subscription.usedTeamSize -= 1;
+        await organization.save();
+      }
 
       return response.ok(res, {
         message:
-          'Team member deleted successfully and removed from all assigned projects',
+          'Team member deleted successfully and subscription usage updated',
       });
     } catch (error) {
       console.error('Delete team member error:', error);
@@ -395,12 +438,14 @@ module.exports = {
 
       const token = crypto.randomBytes(32).toString('hex');
 
+      const TWO_WEEKS = 14 * 24 * 60 * 60 * 1000;
+
       await Invite.create({
         email,
         organizationId,
         token,
         invitedBy: req.user.id,
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+        expiresAt: new Date(Date.now() + TWO_WEEKS),
       });
 
       const inviteLink = `${process.env.FRONTEND_URL}/acceptInvite?token=${token}`;
@@ -487,11 +532,12 @@ module.exports = {
           message: `Team size limit exceeded. Maximum allowed is ${organization.teamSize}`,
         });
       }
+      const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await User.create({
         name,
         email: invite.email,
-        password,
+        password: hashedPassword,
         phone,
         OrganizationId: invite.organizationId,
         role,
@@ -570,6 +616,174 @@ module.exports = {
         message: 'Server error',
         error: error.message,
       });
+    }
+  },
+  getPaymentHistory: async (req, res) => {
+    try {
+      const { userId } = req.query;
+
+      if (!userId) {
+        return response.error(res, {
+          message: 'User ID is required',
+        });
+      }
+
+      const payments = await Payment.find({ userId })
+        .populate('planId')
+        .sort({ createdAt: -1 });
+
+      return response.ok(res, {
+        message: 'Payment history fetched successfully',
+        totalPayments: payments.length,
+        payments,
+      });
+    } catch (error) {
+      return response.error(res, {
+        message: 'Server error',
+        error: error.message,
+      });
+    }
+  },
+  cancelSubscription: async (req, res) => {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return response.error(res, 'Unauthorized');
+      }
+
+      const user = await User.findById(userId);
+
+      if (!user || !user.subscription) {
+        return response.error(res, 'No active subscription found');
+      }
+
+      const subscription = user.subscription;
+
+      // ❌ Already cancelled
+      if (subscription.status === 'cancelled') {
+        return response.error(res, 'Subscription already cancelled');
+      }
+
+      // ❌ Already expired
+      if (new Date(subscription.planEndDate) <= new Date()) {
+        subscription.status = 'expired';
+        await user.save();
+        return response.error(res, 'Subscription already expired');
+      }
+
+      // ✅ Cancel logic
+      subscription.status = 'cancelled';
+      subscription.autoRenew = false;
+      subscription.cancelledAt = new Date(); // optional but useful
+
+      await user.save();
+
+      return response.ok(res, {
+        message:
+          'Subscription cancelled successfully. You will retain access until the end of your billing period.',
+        subscription,
+      });
+    } catch (error) {
+      console.error('Cancel subscription error:', error);
+      return response.error(
+        res,
+        error.message || 'Failed to cancel subscription',
+      );
+    }
+  },
+  resumeSubscription: async (req, res) => {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return response.error(res, 'Unauthorized');
+      }
+
+      const user = await User.findById(userId);
+
+      if (!user || !user.subscription) {
+        return response.error(res, 'No subscription found');
+      }
+
+      const subscription = user.subscription;
+
+      if (subscription.status === 'active') {
+        return response.error(res, 'Subscription is already active');
+      }
+
+      if (new Date(subscription.planEndDate) <= new Date()) {
+        subscription.status = 'expired';
+        await user.save();
+        return response.error(res, 'Subscription already expired');
+      }
+
+      subscription.status = 'active';
+      subscription.autoRenew = true;
+      subscription.resumedAt = new Date(); // optional audit
+
+      await user.save();
+
+      return response.ok(res, {
+        message: 'Subscription resumed successfully',
+        subscription,
+      });
+    } catch (error) {
+      console.error('Resume subscription error:', error);
+      return response.error(
+        res,
+        error.message || 'Failed to resume subscription',
+      );
+    }
+  },
+  toggleAutoRenew: async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const { autoRenew } = req.body; // true / false
+
+      if (!userId) {
+        return response.error(res, 'Unauthorized');
+      }
+
+      if (typeof autoRenew !== 'boolean') {
+        return response.error(res, 'autoRenew must be boolean');
+      }
+
+      const user = await User.findById(userId);
+
+      if (!user || !user.subscription) {
+        return response.error(res, 'No subscription found');
+      }
+
+      const subscription = user.subscription;
+
+      if (new Date(subscription.planEndDate) <= new Date()) {
+        subscription.status = 'expired';
+        await user.save();
+        return response.error(res, 'Subscription already expired');
+      }
+
+      if (subscription.status === 'cancelled' && autoRenew === true) {
+        return response.error(
+          res,
+          'Resume subscription before enabling auto-renew',
+        );
+      }
+      subscription.autoRenew = autoRenew;
+      subscription.autoRenewUpdatedAt = new Date();
+
+      await user.save();
+
+      return response.ok(res, {
+        message: `Auto-renew ${autoRenew ? 'enabled' : 'disabled'} successfully`,
+        subscription,
+      });
+    } catch (error) {
+      console.error('Auto-renew error:', error);
+      return response.error(
+        res,
+        error.message || 'Failed to update auto-renew',
+      );
     }
   },
 };
