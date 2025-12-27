@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { object } = require('underscore');
 
 const memberSchema = new mongoose.Schema(
   {
@@ -25,25 +26,27 @@ const actionRegistrySchema = new mongoose.Schema(
     },
     projectName: { type: String, required: true },
 
-    actionItemDescription: {
-      type: String,
-      required: true,
-    },
+    actions: {
+      actionItemDescription: {
+        type: String,
+        required: true,
+      },
 
-    responsiblePerson: {
-      type: String,
-      required: true,
-    },
+      responsiblePerson: {
+        type: String,
+        required: true,
+      },
 
-    deadline: {
-      type: Date,
-      required: true,
-    },
+      deadline: {
+        type: Date,
+        required: true,
+      },
 
-    status: {
-      type: String,
-      enum: ['pending', 'in-progress', 'completed'],
-      default: 'pending',
+      status: {
+        type: String,
+        enum: ['pending', 'in-progress', 'completed'],
+        default: 'pending',
+      },
     },
   },
   { timestamps: true },
@@ -59,7 +62,7 @@ const meetingMinutesSchema = new mongoose.Schema(
 
     meetingTitle: {
       type: String,
-      required: true, // Project Review Meeting - 12/26/2025
+      required: true,
     },
 
     meetingDate: {
@@ -71,10 +74,7 @@ const meetingMinutesSchema = new mongoose.Schema(
 
     agendas: [agendaSchema],
 
-    meetingDiscussions: {
-      reviewPhysicalProgress: { type: String },
-      budgetAlignment: { type: String },
-    },
+    meetingDiscussions: { type: object },
 
     projectActionRegistry: [actionRegistrySchema],
 

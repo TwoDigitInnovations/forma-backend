@@ -1,5 +1,6 @@
-const MeetingMinutes = require('../models/logsSchema');
+const MeetingMinutes = require('../models/meetingMintesSchema');
 const response = require('../../responses');
+const ActionPoints = require('../models/actionPointsSchema');
 
 const meetingMinutesController = {
   createMeetingMinutes: async (req, res) => {
@@ -15,21 +16,56 @@ const meetingMinutesController = {
         createdBy: userId,
       });
 
+      const data = req.body?.projectActionRegistry;
+      
+      if (!Array.isArray(data) || data.length === 0) {
+        return response.error(res, {
+          message: 'Invalid project action registry data',
+        });
+      }
+
+      const actionPointsPayload = [];
+
+      data.forEach((project) => {
+        const { projectId, actions } = project;
+
+        if (!projectId || !Array.isArray(actions)) return;
+
+        actions.forEach((action) => {
+          actionPointsPayload.push({
+            projectId: projectId,
+            createdBy: userId,
+            description: action.actionItemDescription,
+            assignedTo: action.responsiblePerson || '',
+            dueDate: action.deadline || null,
+            status:
+              action.status === 'completed'
+                ? 'Completed'
+                : action.status === 'in-progress'
+                  ? 'In-Progress'
+                  : 'Open',
+          });
+        });
+      });
+
+      await ActionPoints.insertMany(actionPointsPayload);
+
       return response.ok(res, {
         message: 'Meeting minutes created successfully',
         meeting,
+        totalCreated: actionPointsPayload.length,
       });
     } catch (error) {
-      console.error('Create meeting error:', error);
       return response.error(res, error.message);
     }
   },
+
   getMeetingMinutesById: async (req, res) => {
     try {
       const { id } = req.params;
 
       const meeting = await MeetingMinutes.findById(id)
-        .populate('createdBy', 'name email')
+        .populate('createdBy')
         .populate('projectActionRegistry.projectId', 'name');
 
       if (!meeting) {
@@ -45,9 +81,11 @@ const meetingMinutesController = {
     try {
       const userId = req.user?.id;
 
-      const meetings = await MeetingMinutes.find({ createdBy: userId }).sort({
-        createdAt: -1,
-      });
+      const meetings = await MeetingMinutes.find({ createdBy: userId })
+        .populate('createdBy')
+        .sort({
+          createdAt: -1,
+        });
 
       return response.ok(res, meetings);
     } catch (error) {
