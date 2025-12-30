@@ -22,8 +22,8 @@ router.get(
   meetingController.getMeetingMinutesById,
 );
 
-router.put(
-  '/updateMeetingMinutes/:id',
+router.post(
+  '/updateMeetingMinutes/:editId',
   authenticate,
   meetingController.updateMeetingMinutes,
 );

@@ -22,24 +22,19 @@ const actionRegistrySchema = new mongoose.Schema(
     projectId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Project',
-      required: true,
     },
-    projectName: { type: String, required: true },
 
     actions: {
       actionItemDescription: {
         type: String,
-        required: true,
       },
 
       responsiblePerson: {
         type: String,
-        required: true,
       },
 
       deadline: {
         type: Date,
-        required: true,
       },
 
       status: {

@@ -10,7 +10,7 @@ router.get('/getProjectStats', authenticate, Project.getProjectStats);
 router.get('/getProjectById/:id', authenticate, Project.getProjectById);
 router.put('/updateProject/:id', authenticate, Project.updateProject);
 router.post('/updateProjectStatus', authenticate, Project.updateProjectStatus);
-router.delete('deleteProject/:id', authenticate, Project.deleteProject);
+router.delete('/deleteProject/:id', authenticate, Project.deleteProject);
 
 router.post(
   '/update-advance-payment/:projectId',
