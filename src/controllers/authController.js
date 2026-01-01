@@ -162,24 +162,12 @@ module.exports = {
 
   sendOTP: async (req, res) => {
     try {
-      const { email, firstName, lastName } = req.body;
+      const { email } = req.body;
 
       const user = await User.findOne({ email });
 
       if (!user) {
         return response.badReq(res, { message: 'Email does not exist.' });
-      }
-
-      const fullNameFromRequest = `${firstName} ${lastName}`
-        .trim()
-        .toLowerCase();
-      const fullNameFromDB = user.name?.trim().toLowerCase();
-      console.log('fullNameFromRequest', fullNameFromRequest);
-      console.log('fullNameFromDB', fullNameFromDB);
-      if (fullNameFromRequest !== fullNameFromDB) {
-        return response.badReq(res, {
-          message: 'Name and email do not match our records.',
-        });
       }
 
       let ran_otp = Math.floor(1000 + Math.random() * 9000);
@@ -262,7 +250,8 @@ module.exports = {
 
   updateProfile: async (req, res) => {
     try {
-      const { userId, ...updateData } = req.body;
+      const { name, email, phone } = req.body;
+      const userId = req.user?.id;
 
       if (!userId) {
         return res
@@ -270,10 +259,18 @@ module.exports = {
           .json({ status: false, message: 'User ID is required' });
       }
 
-      const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
-        new: true,
-        runValidators: true,
-      }).select('-password');
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        {
+          name: name,
+          email: email,
+          phone: phone,
+        },
+        {
+          new: true,
+          runValidators: true,
+        },
+      ).select('-password');
 
       if (!updatedUser) {
         return res

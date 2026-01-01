@@ -8,9 +8,9 @@ router.post('/login', authController.login);
 router.post('/register', authController.register);
 router.get('/profile', authenticate, authController.getUser);
 router.post('/sendOTP', authController.sendOTP);
-router.post('/updateProfile', authController.updateProfile);
 router.post('/verifyOTP', authController.verifyOTP);
 router.post('/changePassword', authController.changePassword);
+router.post('/updateProfile', authenticate, authController.updateProfile);
 router.post(
   '/changePasswordfromAdmin',
   authenticate,
