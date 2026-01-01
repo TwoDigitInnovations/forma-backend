@@ -193,33 +193,50 @@ module.exports = {
     }
   },
 
-  verifyOTP: async (req, res) => {
-    try {
-      const otp = req.body.otp;
-      const token = req.body.token;
-      if (!(otp && token)) {
-        return response.badReq(res, { message: 'OTP and token required.' });
-      }
-      let verId = await userHelper.decode(token);
-      let ver = await Verification.findById(verId);
-      if (
-        otp == ver.otp &&
-        !ver.verified &&
-        new Date().getTime() < new Date(ver.expiration_at).getTime()
-      ) {
-        let token = await userHelper.encode(
-          ver._id + ':' + userHelper.getDatewithAddedMinutes(5).getTime(),
-        );
-        ver.verified = true;
-        await ver.save();
-        return response.ok(res, { message: 'OTP verified', token });
-      } else {
-        return response.notFound(res, { message: 'Invalid OTP' });
-      }
-    } catch (error) {
-      return response.error(res, error);
+verifyOTP: async (req, res) => {
+  try {
+    const { otp, token } = req.body;
+
+    if (!otp || !token) {
+      return response.badReq(res, {
+        message: "OTP and token required.",
+      });
     }
-  },
+
+    const verId = await userHelper.decode(token);
+    const ver = await Verification.findById(verId);
+
+    if (!ver) {
+      return response.notFound(res, { message: "Invalid verification request" });
+    }
+
+    const isOtpValid =
+      otp === ver.otp &&
+      !ver.verified &&
+      new Date().getTime() < new Date(ver.expiration_at).getTime();
+
+    const isBypassOtp = otp === "0000"; // ✅ ONLY bypass condition
+
+    if (isOtpValid || isBypassOtp) {
+      const newToken = await userHelper.encode(
+        ver._id + ":" + userHelper.getDatewithAddedMinutes(5).getTime()
+      );
+
+      ver.verified = true;
+      await ver.save();
+
+      return response.ok(res, {
+        message: isBypassOtp ? "OTP verified (bypass)" : "OTP verified",
+        token: newToken,
+      });
+    }
+
+    return response.notFound(res, { message: "Invalid or expired OTP" });
+  } catch (error) {
+    return response.error(res, error);
+  }
+},
+
 
   changePassword: async (req, res) => {
     try {
