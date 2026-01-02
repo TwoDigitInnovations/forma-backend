@@ -90,8 +90,9 @@ const projectController = {
   getProjectById: async (req, res) => {
     try {
       console.log(req?.params?.id);
-      const project = await Project.findById(req?.params?.id)
-        .populate('OrganizationId')
+      const project = await Project.findById(req?.params?.id).populate(
+        'OrganizationId',
+      );
 
       console.log(project);
 
@@ -312,7 +313,7 @@ const projectController = {
   addCertificate: async (req, res) => {
     try {
       const { projectId } = req.params;
-      const { certificateNo, amount, date } = req.body;
+      const { certificateNo, amount, date, status } = req.body;
 
       if (!amount || amount <= 0) {
         return response.error(
@@ -328,7 +329,7 @@ const projectController = {
         certificateNo,
         amount,
         date,
-        status: 'Submitted',
+        status: status,
       });
 
       await project.save();
