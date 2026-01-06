@@ -43,7 +43,7 @@ const PricingPlanController = {
 
   updatePlan: async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params?.editId;
 
       const plan = await PricingPlan.findByIdAndUpdate(id, req.body, {
         new: true,
@@ -78,6 +78,25 @@ const PricingPlanController = {
       }
 
       return response.ok(res, plan);
+    } catch (error) {
+      console.error('Get Plan Error:', error);
+      return response.error(res, error.message || 'Something went wrong');
+    }
+  },
+
+  deletePlan: async (req, res) => {
+    try {
+      const { planId } = req.params;
+
+      const plan = await PricingPlan.findByIdAndDelete(planId);
+
+      if (!plan) {
+        return response.notFound(res, {
+          message: 'Pricing plan not found',
+        });
+      }
+
+      return response.ok(res, { message: 'deleted sucessfully', PricingPlan });
     } catch (error) {
       console.error('Get Plan Error:', error);
       return response.error(res, error.message || 'Something went wrong');

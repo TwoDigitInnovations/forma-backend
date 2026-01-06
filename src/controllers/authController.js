@@ -35,6 +35,7 @@ module.exports = {
         password: hashedPassword,
         phone,
         role,
+        status: 'verified',
       });
 
       await newUser.save();
@@ -193,50 +194,51 @@ module.exports = {
     }
   },
 
-verifyOTP: async (req, res) => {
-  try {
-    const { otp, token } = req.body;
+  verifyOTP: async (req, res) => {
+    try {
+      const { otp, token } = req.body;
 
-    if (!otp || !token) {
-      return response.badReq(res, {
-        message: "OTP and token required.",
-      });
+      if (!otp || !token) {
+        return response.badReq(res, {
+          message: 'OTP and token required.',
+        });
+      }
+
+      const verId = await userHelper.decode(token);
+      const ver = await Verification.findById(verId);
+
+      if (!ver) {
+        return response.notFound(res, {
+          message: 'Invalid verification request',
+        });
+      }
+
+      const isOtpValid =
+        otp === ver.otp &&
+        !ver.verified &&
+        new Date().getTime() < new Date(ver.expiration_at).getTime();
+
+      const isBypassOtp = otp === '0000'; // ✅ ONLY bypass condition
+
+      if (isOtpValid || isBypassOtp) {
+        const newToken = await userHelper.encode(
+          ver._id + ':' + userHelper.getDatewithAddedMinutes(5).getTime(),
+        );
+
+        ver.verified = true;
+        await ver.save();
+
+        return response.ok(res, {
+          message: isBypassOtp ? 'OTP verified (bypass)' : 'OTP verified',
+          token: newToken,
+        });
+      }
+
+      return response.notFound(res, { message: 'Invalid or expired OTP' });
+    } catch (error) {
+      return response.error(res, error);
     }
-
-    const verId = await userHelper.decode(token);
-    const ver = await Verification.findById(verId);
-
-    if (!ver) {
-      return response.notFound(res, { message: "Invalid verification request" });
-    }
-
-    const isOtpValid =
-      otp === ver.otp &&
-      !ver.verified &&
-      new Date().getTime() < new Date(ver.expiration_at).getTime();
-
-    const isBypassOtp = otp === "0000"; // ✅ ONLY bypass condition
-
-    if (isOtpValid || isBypassOtp) {
-      const newToken = await userHelper.encode(
-        ver._id + ":" + userHelper.getDatewithAddedMinutes(5).getTime()
-      );
-
-      ver.verified = true;
-      await ver.save();
-
-      return response.ok(res, {
-        message: isBypassOtp ? "OTP verified (bypass)" : "OTP verified",
-        token: newToken,
-      });
-    }
-
-    return response.notFound(res, { message: "Invalid or expired OTP" });
-  } catch (error) {
-    return response.error(res, error);
-  }
-},
-
+  },
 
   changePassword: async (req, res) => {
     try {
@@ -313,7 +315,7 @@ verifyOTP: async (req, res) => {
   changePasswordfromAdmin: async (req, res) => {
     try {
       const { currentPassword, newPassword } = req.body;
-      const userId = req.user.id; // middleware से मिल रहा है
+      const userId = req.user.id;
 
       if (!currentPassword || !newPassword) {
         return response.error(
@@ -797,6 +799,39 @@ verifyOTP: async (req, res) => {
       return response.error(
         res,
         error.message || 'Failed to update auto-renew',
+      );
+    }
+  },
+
+  getAllUser: async (req, res) => {
+    try {
+      const role = req?.query?.role;
+      const search = req.query.search || '';
+
+      const filter = {
+        role: role,
+      };
+
+      if (search) {
+        filter.$or = [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+        ];
+      }
+
+      const users = await User.find(filter)
+        .populate('OrganizationId')
+        .sort({ createdAt: -1 });
+
+      return response.ok(res, {
+        message: 'user fetch successfully',
+        data: users,
+      });
+    } catch (error) {
+      console.error('Get user error:', error);
+      return response.error(
+        res,
+        error.message || 'Failed to fetch user Members',
       );
     }
   },

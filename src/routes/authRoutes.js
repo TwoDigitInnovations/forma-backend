@@ -43,5 +43,5 @@ router.post(
   authController.resumeSubscription,
 );
 router.post('/toggleAutoRenew', authenticate, authController.toggleAutoRenew);
-
+router.get('/getAllUser', authenticate, authController?.getAllUser);
 module.exports = router;
