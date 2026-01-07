@@ -21,6 +21,11 @@ router.get(
   authenticate,
   authController.getAllTeamMembers,
 );
+router.get(
+  '/getAllTeamMembersAdmin',
+  authController.getAllTeamMembersAdmin,
+);
+
 router.delete('/deleteTeamMember/:deleteId', authController.deleteTeamMember);
 router.get('/acceptInvite', authController.acceptInvite);
 router.post('/createInviteLink', authenticate, authController.createInviteLink);

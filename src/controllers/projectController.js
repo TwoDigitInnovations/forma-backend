@@ -1,6 +1,7 @@
 const Project = require('../models/Projectschema');
 const response = require('./../../responses');
 const User = require('@models/User');
+const mongoose = require('mongoose');
 
 const projectController = {
   createProject: async (req, res) => {
@@ -545,6 +546,26 @@ const projectController = {
     } catch (error) {
       console.error('Assign project error:', error);
       return response.error(res, error.message || 'Failed to assign project');
+    }
+  },
+
+  getAllProjectforAdmin: async (req, res) => {
+    try {
+      const { userId } = req.query;
+
+      const projects = await Project.find({
+        OrganizationId: new mongoose.Types.ObjectId(userId),
+      })
+        .populate('OrganizationId')
+        .sort({ createdAt: -1 });
+
+      return response.ok(res, {
+        message: 'Projects fetched successfully',
+        data: projects,
+      });
+    } catch (error) {
+      console.error('Get projects error:', error);
+      return response.error(res, error.message || 'Failed to fetch projects');
     }
   },
 };

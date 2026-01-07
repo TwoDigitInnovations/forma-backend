@@ -388,6 +388,33 @@ module.exports = {
     }
   },
 
+  getAllTeamMembersAdmin: async (req, res) => {
+    try {
+      const organizationId = req.query?.id;
+
+      if (!organizationId) {
+        return response.error(res, 'Unauthorized: Organization ID not found');
+      }
+
+      const members = await User.find({
+        role: 'TeamsMember',
+        OrganizationId: organizationId,
+      })
+        .populate('OrganizationId')
+        .sort({ createdAt: -1 });
+
+      return response.ok(res, {
+        message: 'Team members fetched successfully',
+        data: members,
+      });
+    } catch (error) {
+      return response.error(
+        res,
+        error.message || 'Failed to fetch Team Members',
+      );
+    }
+  },
+  
   deleteTeamMember: async (req, res) => {
     try {
       const organizationId = req.body?.id;

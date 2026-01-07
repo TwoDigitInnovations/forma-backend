@@ -51,4 +51,9 @@ router.post(
   Project.assignProjectToMember,
 );
 
+router.get(
+  '/getAllProjectforAdmin',
+  authenticate,
+  Project.getAllProjectforAdmin,
+);
 module.exports = router;
