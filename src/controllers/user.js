@@ -41,33 +41,51 @@ module.exports = {
   },
   getMonthlyRevenue: async (req, res) => {
     try {
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+      const year = Number(req.query.year) || new Date().getFullYear();
 
-      const data = await Promise.all(
-        months.map(async (month, index) => {
-          const start = new Date(new Date().getFullYear(), index, 1);
-          const end = new Date(new Date().getFullYear(), index + 1, 0);
+      const startDate = new Date(year, 0, 1);
+      const endDate = new Date(year, 11, 31, 23, 59, 59);
 
-          const revenue = await PaymentHistory.aggregate([
-            {
-              $match: {
-                status: 'SUCCESS',
-                createdAt: { $gte: start, $lte: end },
-              },
-            },
-            { $group: { _id: null, total: { $sum: '$amount' } } },
-          ]);
+      // Single aggregation for whole year
+      const revenueData = await PaymentHistory.aggregate([
+        {
+          $match: {
+            paymentStatus: 'success',
+            createdAt: { $gte: startDate, $lte: endDate },
+          },
+        },
+        {
+          $group: {
+            _id: { $month: '$createdAt' },
+            total: { $sum: '$amount' },
+          },
+        },
+      ]);
 
-          return {
-            month,
-            revenue: revenue[0]?.total || 0,
-          };
-        }),
-      );
+      // Month index → revenue map
+      const revenueMap = {};
+      revenueData.forEach((item) => {
+        revenueMap[item._id] = item.total;
+      });
 
-      return response.ok(res, { status: true, data });
+      // Generate all 12 months
+      const months = Array.from({ length: 12 }, (_, i) => {
+        const date = new Date(year, i, 1);
+        return {
+          month: date.toLocaleString('en-US', { month: 'short' }),
+          revenue: revenueMap[i + 1] || 0,
+        };
+      });
+
+      return response.ok(res, {
+        status: true,
+        data: months,
+      });
     } catch (error) {
-      return response.error(res, error.message);
+      return response.error(
+        res,
+        error.message || 'Failed to fetch monthly revenue',
+      );
     }
   },
   getPaymentDistribution: async (req, res) => {
