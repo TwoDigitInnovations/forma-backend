@@ -5,6 +5,7 @@ const memberSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     designation: { type: String, required: true },
+    Organization: { type: String, required: true },
   },
   { _id: false },
 );
