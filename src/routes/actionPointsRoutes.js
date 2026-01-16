@@ -12,3 +12,5 @@ router.put('/update/:id', authenticate, ActionsPoints.update);
 router.delete('/delete/:id', authenticate, ActionsPoints.delete);
 
 module.exports = router;
+
+

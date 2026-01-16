@@ -42,13 +42,11 @@ const actionRegistrySchema = new mongoose.Schema(
         priority: {
           type: String,
           enum: ['Low', 'Medium', 'High'],
-          default: 'Medium',
         },
 
         status: {
           type: String,
           enum: ['Open', 'In-Progress', 'Completed'],
-          default: 'Open',
         },
       },
     ],

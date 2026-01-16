@@ -19,8 +19,6 @@ const meetingMinutesController = {
         });
       }
 
-      console.log('data', data?.action);
-
       const meeting = await MeetingMinutes.create({
         ...req.body,
         createdBy: userId,
@@ -41,12 +39,7 @@ const meetingMinutesController = {
             description: action.actionItemDescription,
             assignedTo: action.responsiblePerson || '',
             dueDate: action.deadline || null,
-            status:
-              action.status === 'completed'
-                ? 'Completed'
-                : action.status === 'in-progress'
-                  ? 'In-Progress'
-                  : 'Open',
+            status: action.status,
           });
         });
       });
@@ -107,65 +100,62 @@ const meetingMinutesController = {
         return response.error(res, { message: 'Unauthorized' });
       }
 
-      const data = req.body?.projectActionRegistry;
+      const {
+        meetingTitle,
+        meetingDate,
+        membersPresent,
+        agendas,
+        meetingDiscussions,
+        projectActionRegistry = [],
+      } = req.body;
 
-      if (!Array.isArray(data)) {
+      if (!Array.isArray(projectActionRegistry)) {
         return response.error(res, {
           message: 'Invalid project action registry data',
         });
       }
 
       const meeting = await MeetingMinutes.findById(editId);
-
       if (!meeting) {
-        return response.error(res, {
-          message: 'Meeting not found',
-        });
+        return response.error(res, { message: 'Meeting not found' });
       }
 
-      Object.assign(meeting, req.body);
+      meeting.meetingTitle = meetingTitle ?? meeting.meetingTitle;
+      meeting.meetingDate = meetingDate ?? meeting.meetingDate;
+      meeting.membersPresent = membersPresent ?? meeting.membersPresent;
+      meeting.agendas = agendas ?? meeting.agendas;
+      meeting.meetingDiscussions =
+        meetingDiscussions ?? meeting.meetingDiscussions;
+      meeting.projectActionRegistry = projectActionRegistry;
       meeting.status = 'synced';
+
       await meeting.save();
 
-      if (!Array.isArray(data)) {
-        return response.ok(res, {
-          message: 'Meeting updated successfully',
-          meeting,
-          totalCreated: 0,
-        });
-      }
-
-      const projectIds = data.map((item) => item.projectId).filter(Boolean);
+      const projectIds = projectActionRegistry
+        .map((item) => item.projectId)
+        .filter(Boolean);
 
       await ActionPoints.deleteMany({
         projectId: { $in: projectIds },
         createdBy: userId,
+        meetingId: editId,
       });
 
       const actionPointsPayload = [];
 
-      console.log('userid', userId);
-      console.log('actionPointsPayload', actionPointsPayload);
-
-      data.forEach((project) => {
+      projectActionRegistry.forEach((project) => {
         const { projectId, actions } = project;
-
         if (!projectId || !Array.isArray(actions)) return;
-        console.log('action', actions);
 
         actions.forEach((action) => {
           actionPointsPayload.push({
+            meetingId: editId,
             projectId,
             createdBy: userId,
             description: action.actionItemDescription,
             assignedTo: action.responsiblePerson || '',
             dueDate: action.deadline || null,
-            status:
-              action.status === 'completed'
-                ? 'Completed'
-                : action.status === 'in-progress'
-                  ? 'In-Progress'
-                  : 'Open',
+            status: action.status,
           });
         });
       });
@@ -177,10 +167,11 @@ const meetingMinutesController = {
       return response.ok(res, {
         message: 'Meeting minutes updated successfully',
         meeting,
-        totalCreated: actionPointsPayload.length,
+        totalActionPoints: actionPointsPayload.length,
       });
     } catch (error) {
-      return response.error(res, error.message);
+      console.error('updateMeetingMinutes error:', error);
+      return response.error(res, { message: error.message });
     }
   },
 
