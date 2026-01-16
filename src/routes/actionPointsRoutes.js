@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.post('/create/:projectId', authenticate, ActionsPoints.create);
 router.get('/getAlllist/:projectId', authenticate, ActionsPoints.getByProject);
+router.get('/getAllActionPoints', authenticate, ActionsPoints.getAllActionPoints);
 router.get('/getOne/:id', authenticate, ActionsPoints.getOne);
 router.put('/update/:id', authenticate, ActionsPoints.update);
 router.delete('/delete/:id', authenticate, ActionsPoints.delete);

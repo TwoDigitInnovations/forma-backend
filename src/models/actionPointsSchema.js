@@ -4,7 +4,7 @@ const actionPointsSchema = new mongoose.Schema(
   {
     projectId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Projects",
+      ref: "Project",
       required: true,
     },
 

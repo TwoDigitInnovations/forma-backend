@@ -19,6 +19,8 @@ const meetingMinutesController = {
         });
       }
 
+      console.log('data', data?.action);
+
       const meeting = await MeetingMinutes.create({
         ...req.body,
         createdBy: userId,
@@ -135,20 +137,21 @@ const meetingMinutesController = {
 
       const projectIds = data.map((item) => item.projectId).filter(Boolean);
 
-      // await ActionPoints.deleteMany({
-      //   projectId: { $in: projectIds },
-      //   createdBy: userId,
-      // });
+      await ActionPoints.deleteMany({
+        projectId: { $in: projectIds },
+        createdBy: userId,
+      });
 
       const actionPointsPayload = [];
 
-      console.log("userid",userId);
-      
+      console.log('userid', userId);
+      console.log('actionPointsPayload', actionPointsPayload);
+
       data.forEach((project) => {
         const { projectId, actions } = project;
 
         if (!projectId || !Array.isArray(actions)) return;
-        console.log("action",actions);
+        console.log('action', actions);
 
         actions.forEach((action) => {
           actionPointsPayload.push({
@@ -176,7 +179,6 @@ const meetingMinutesController = {
         meeting,
         totalCreated: actionPointsPayload.length,
       });
-      
     } catch (error) {
       return response.error(res, error.message);
     }

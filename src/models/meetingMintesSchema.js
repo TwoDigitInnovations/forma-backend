@@ -5,7 +5,7 @@ const memberSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     designation: { type: String, required: true },
-    Organization: { type: String, required: true },
+    Organization: { type: String },
   },
   { _id: false },
 );
@@ -25,25 +25,33 @@ const actionRegistrySchema = new mongoose.Schema(
       ref: 'Project',
     },
 
-    actions: {
-      actionItemDescription: {
-        type: String,
-      },
+    actions: [
+      {
+        actionItemDescription: {
+          type: String,
+        },
 
-      responsiblePerson: {
-        type: String,
-      },
+        responsiblePerson: {
+          type: String,
+        },
 
-      deadline: {
-        type: Date,
-      },
+        deadline: {
+          type: Date,
+        },
 
-      status: {
-        type: String,
-        enum: ['pending', 'in-progress', 'completed'],
-        default: 'pending',
+        priority: {
+          type: String,
+          enum: ['Low', 'Medium', 'High'],
+          default: 'Medium',
+        },
+
+        status: {
+          type: String,
+          enum: ['Open', 'In-Progress', 'Completed'],
+          default: 'Open',
+        },
       },
-    },
+    ],
   },
   { timestamps: true },
 );
