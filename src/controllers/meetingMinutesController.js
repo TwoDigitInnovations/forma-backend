@@ -125,7 +125,7 @@ const meetingMinutesController = {
       meeting.membersPresent = membersPresent ?? meeting.membersPresent;
       meeting.agendas = agendas ?? meeting.agendas;
       meeting.meetingDiscussions =
-        meetingDiscussions ?? meeting.meetingDiscussions;
+      meetingDiscussions ?? meeting.meetingDiscussions;
       meeting.projectActionRegistry = projectActionRegistry;
       meeting.status = 'synced';
 
