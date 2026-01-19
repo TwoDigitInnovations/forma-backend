@@ -142,6 +142,42 @@ const ActionPointsController = {
       );
     }
   },
+  updateStatus: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status) {
+        return response.badRequest(res, 'Status is required');
+      }
+
+      const allowedStatus = ['Open', 'In-Progress', 'Completed'];
+
+      if (!allowedStatus.includes(status)) {
+        return response.badRequest(res, 'Invalid status value');
+      }
+
+      const updated = await ActionPoints.findByIdAndUpdate(
+        id,
+        { status },
+        { new: true },
+      );
+
+      if (!updated) {
+        return response.notFound(res, 'Action point not found');
+      }
+
+      return response.ok(res, {
+        message: 'Action point status updated successfully',
+        data: updated,
+      });
+    } catch (error) {
+      return response.error(
+        res,
+        error.message || 'Failed to update action point',
+      );
+    }
+  },
 };
 
 module.exports = ActionPointsController;

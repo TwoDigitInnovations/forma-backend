@@ -10,6 +10,7 @@ router.get('/getAllActionPoints', authenticate, ActionsPoints.getAllActionPoints
 router.get('/getOne/:id', authenticate, ActionsPoints.getOne);
 router.put('/update/:id', authenticate, ActionsPoints.update);
 router.delete('/delete/:id', authenticate, ActionsPoints.delete);
+router.put('/updateStatus/:id', authenticate, ActionsPoints.updateStatus);
 
 module.exports = router;
 
