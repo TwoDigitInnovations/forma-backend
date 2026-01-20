@@ -40,4 +40,11 @@ module.exports = {
   getDatewithAddedMinutes: (minutes) => {
     return new Date(new Date().getTime() + minutes * 60000);
   },
+  getMonthDiff: (start, end) => {
+    let months =
+      (end.getFullYear() - start.getFullYear()) * 12 +
+      (end.getMonth() - start.getMonth());
+
+    return months < 0 ? 0 : months;
+  },
 };

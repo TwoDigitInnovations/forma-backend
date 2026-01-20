@@ -3,61 +3,70 @@ const response = require('../../responses');
 const ActionPoints = require('../models/actionPointsSchema');
 
 const meetingMinutesController = {
-  createMeetingMinutes: async (req, res) => {
-    try {
-      const userId = req.user?.id;
-
-      if (!userId) {
-        return response.error(res, { message: 'Unauthorized' });
-      }
-
-      const data = req.body?.projectActionRegistry;
-
-      if (!Array.isArray(data)) {
-        return response.error(res, {
-          message: 'Invalid project action registry data',
-        });
-      }
-
-      const meeting = await MeetingMinutes.create({
-        ...req.body,
-        createdBy: userId,
-        projectActionRegistry: data,
-      });
-
-      const actionPointsPayload = [];
-
-      data.forEach((project) => {
-        const { projectId, actions } = project;
-
-        if (!projectId || !Array.isArray(actions)) return;
-
-        actions.forEach((action) => {
-          actionPointsPayload.push({
-            projectId,
-            createdBy: userId,
-            description: action.actionItemDescription,
-            assignedTo: action.responsiblePerson || '',
-            dueDate: action.deadline || null,
-            status: action.status,
-          });
-        });
-      });
-
-      if (actionPointsPayload.length > 0) {
-        await ActionPoints.insertMany(actionPointsPayload);
-      }
-
-      return response.ok(res, {
-        message: 'Meeting minutes created successfully',
-        meeting,
-        totalCreated: actionPointsPayload.length,
-      });
-    } catch (error) {
-      console.error('createMeetingMinutes error:', error);
-      return response.error(res, { message: error.message });
+ createMeetingMinutes: async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return response.error(res, { message: 'Unauthorized' });
     }
-  },
+
+    const projectActionRegistry = req.body?.projectActionRegistry;
+    if (!Array.isArray(projectActionRegistry)) {
+      return response.error(res, {
+        message: 'Invalid project action registry data',
+      });
+    }
+
+    // 1️⃣ Create Meeting
+    const meeting = await MeetingMinutes.create({
+      ...req.body,
+      createdBy: userId,
+      projectActionRegistry,
+    });
+
+    // 2️⃣ UPSERT action points (NO DUPLICATES)
+    const actionPointsOps = [];
+
+    projectActionRegistry.forEach((project) => {
+      const { projectId, actions } = project;
+      if (!projectId || !Array.isArray(actions)) return;
+
+      actions.forEach((action) => {
+        actionPointsOps.push({
+          updateOne: {
+            filter: {
+              projectId,
+              createdBy: userId,
+              description: action.actionItemDescription,
+            },
+            update: {
+              $set: {
+                assignedTo: action.responsiblePerson || '',
+                dueDate: action.deadline || null,
+                status: action.status,
+              },
+            },
+            upsert: true, // 🔥 prevents duplicates
+          },
+        });
+      });
+    });
+
+    if (actionPointsOps.length > 0) {
+      await ActionPoints.bulkWrite(actionPointsOps);
+    }
+
+    return response.ok(res, {
+      message: 'Meeting minutes created successfully',
+      meeting,
+      totalActionPointsProcessed: actionPointsOps.length,
+    });
+  } catch (error) {
+    console.error('createMeetingMinutes error:', error);
+    return response.error(res, { message: error.message });
+  }
+},
+
 
   getMeetingMinutesById: async (req, res) => {
     try {
@@ -92,88 +101,87 @@ const meetingMinutesController = {
     }
   },
   updateMeetingMinutes: async (req, res) => {
-    try {
-      const { editId } = req.params;
-      const userId = req.user?.id;
+  try {
+    const { editId } = req.params;
+    const userId = req.user?.id;
 
-      if (!userId) {
-        return response.error(res, { message: 'Unauthorized' });
-      }
-
-      const {
-        meetingTitle,
-        meetingDate,
-        membersPresent,
-        agendas,
-        meetingDiscussions,
-        projectActionRegistry = [],
-      } = req.body;
-
-      if (!Array.isArray(projectActionRegistry)) {
-        return response.error(res, {
-          message: 'Invalid project action registry data',
-        });
-      }
-
-      const meeting = await MeetingMinutes.findById(editId);
-      if (!meeting) {
-        return response.error(res, { message: 'Meeting not found' });
-      }
-
-      meeting.meetingTitle = meetingTitle ?? meeting.meetingTitle;
-      meeting.meetingDate = meetingDate ?? meeting.meetingDate;
-      meeting.membersPresent = membersPresent ?? meeting.membersPresent;
-      meeting.agendas = agendas ?? meeting.agendas;
-      meeting.meetingDiscussions =
-      meetingDiscussions ?? meeting.meetingDiscussions;
-      meeting.projectActionRegistry = projectActionRegistry;
-      meeting.status = 'synced';
-
-      await meeting.save();
-
-      const projectIds = projectActionRegistry
-        .map((item) => item.projectId)
-        .filter(Boolean);
-
-      await ActionPoints.deleteMany({
-        projectId: { $in: projectIds },
-        createdBy: userId,
-        meetingId: editId,
-      });
-
-      const actionPointsPayload = [];
-
-      projectActionRegistry.forEach((project) => {
-        const { projectId, actions } = project;
-        if (!projectId || !Array.isArray(actions)) return;
-
-        actions.forEach((action) => {
-          actionPointsPayload.push({
-            meetingId: editId,
-            projectId,
-            createdBy: userId,
-            description: action.actionItemDescription,
-            assignedTo: action.responsiblePerson || '',
-            dueDate: action.deadline || null,
-            status: action.status,
-          });
-        });
-      });
-
-      if (actionPointsPayload.length > 0) {
-        await ActionPoints.insertMany(actionPointsPayload);
-      }
-
-      return response.ok(res, {
-        message: 'Meeting minutes updated successfully',
-        meeting,
-        totalActionPoints: actionPointsPayload.length,
-      });
-    } catch (error) {
-      console.error('updateMeetingMinutes error:', error);
-      return response.error(res, { message: error.message });
+    if (!userId) {
+      return response.error(res, { message: 'Unauthorized' });
     }
-  },
+
+    const {
+      meetingTitle,
+      meetingDate,
+      membersPresent,
+      agendas,
+      meetingDiscussions,
+      projectActionRegistry = [],
+    } = req.body;
+
+    if (!Array.isArray(projectActionRegistry)) {
+      return response.error(res, {
+        message: 'Invalid project action registry data',
+      });
+    }
+
+    const meeting = await MeetingMinutes.findById(editId);
+    if (!meeting) {
+      return response.error(res, { message: 'Meeting not found' });
+    }
+
+    meeting.meetingTitle = meetingTitle ?? meeting.meetingTitle;
+    meeting.meetingDate = meetingDate ?? meeting.meetingDate;
+    meeting.membersPresent = membersPresent ?? meeting.membersPresent;
+    meeting.agendas = agendas ?? meeting.agendas;
+    meeting.meetingDiscussions =
+      meetingDiscussions ?? meeting.meetingDiscussions;
+    meeting.projectActionRegistry = projectActionRegistry;
+    meeting.status = 'synced';
+
+    await meeting.save();
+
+    const actionPointsOps = [];
+
+    projectActionRegistry.forEach((project) => {
+      const { projectId, actions } = project;
+      if (!projectId || !Array.isArray(actions)) return;
+
+      actions.forEach((action) => {
+        actionPointsOps.push({
+          updateOne: {
+            filter: {
+              projectId,
+              createdBy: userId,
+              description: action.actionItemDescription,
+            },
+            update: {
+              $set: {
+                assignedTo: action.responsiblePerson || '',
+                dueDate: action.deadline || null,
+                status: action.status,
+              },
+            },
+            upsert: true,
+          },
+        });
+      });
+    });
+
+    if (actionPointsOps.length > 0) {
+      await ActionPoints.bulkWrite(actionPointsOps);
+    }
+
+    return response.ok(res, {
+      message: 'Meeting minutes updated successfully',
+      meeting,
+      totalActionPointsProcessed: actionPointsOps.length,
+    });
+  } catch (error) {
+    console.error('updateMeetingMinutes error:', error);
+    return response.error(res, { message: error.message });
+  }
+},
+
 
   deleteMeetingMinutes: async (req, res) => {
     try {

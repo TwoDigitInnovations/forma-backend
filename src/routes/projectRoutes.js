@@ -56,4 +56,7 @@ router.get(
   authenticate,
   Project.getAllProjectforAdmin,
 );
+
+router.get('/getAllBehindProjects', authenticate, Project.getAllBehindProject);
+
 module.exports = router;

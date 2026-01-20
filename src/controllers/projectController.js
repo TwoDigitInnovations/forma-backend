@@ -2,6 +2,8 @@ const Project = require('../models/Projectschema');
 const response = require('./../../responses');
 const User = require('@models/User');
 const mongoose = require('mongoose');
+const { getMonthDiff } = require('../helper/user');
+const ActionPoint = require('../models/actionPointsSchema');
 
 const projectController = {
   createProject: async (req, res) => {
@@ -202,34 +204,39 @@ const projectController = {
     }
   },
 
-  deleteProject: async (req, res) => {
-    try {
-      const { id } = req.params;
+ deleteProject: async (req, res) => {
+  try {
+    const { id } = req.params;
 
-      const project = await Project.findById(id);
+    const project = await Project.findOne({ _id: id, isActive: true });
 
-      if (!project || !project.isActive) {
-        return res.status(404).json({
-          status: false,
-          message: 'Project not found',
-        });
-      }
-
-      await Project.findByIdAndUpdate(id, {
-        $set: {
-          isActive: false,
-          updatedBy: req.user?.id || req.userId,
-        },
+    if (!project) {
+      return res.status(404).json({
+        status: false,
+        message: "Project not found",
       });
-
-      return response.ok(res, {
-        message: 'Project deleted successfully',
-      });
-    } catch (error) {
-      console.error('Delete project error:', error);
-      return response.error(res, error.message || 'Failed to delete project');
     }
-  },
+
+    const userId = req.user?.id || req.userId;
+
+    await Project.findByIdAndUpdate(id, {
+      $set: {
+        isActive: false,
+        updatedBy: userId,
+      },
+    });
+
+    await ActionPoint.deleteMany({ projectId: id });
+
+    return response.ok(res, {
+      message: "Project and related action points deleted successfully",
+    });
+
+  } catch (error) {
+    console.error("Delete project error:", error);
+    return response.error(res, error.message || "Failed to delete project");
+  }
+},
 
   getProjectStats: async (req, res) => {
     try {
@@ -566,6 +573,66 @@ const projectController = {
     } catch (error) {
       console.error('Get projects error:', error);
       return response.error(res, error.message || 'Failed to fetch projects');
+    }
+  },
+
+  getAllBehindProject: async (req, res) => {
+    try {
+      const userId = req.user.id;
+
+      const projects = await Project.find({
+        createdBy: userId,
+        isActive: true,
+      });
+
+      const today = new Date();
+
+      const behindProjects = [];
+
+      projects.forEach((project) => {
+        const startDate = new Date(project.startDate);
+        const duration = Number(project.Duration); // months
+        const actualProgress = project.actualProgress || 0;
+
+        const timeLapsed = getMonthDiff(startDate, today);
+
+        let plannedProgress = (timeLapsed / duration) * 100;
+        if (plannedProgress > 100) plannedProgress = 100;
+
+        const difference = plannedProgress - actualProgress;
+
+        if (difference > 5) {
+          behindProjects.push({
+            _id: project._id,
+            projectName: project.projectName,
+            projectNo: project.projectNo,
+            location: project.location,
+            projectType: project.projectType,
+            status: project.status,
+            startDate: project.startDate,
+            endDate: project.endDate,
+            duration,
+            plannedProgress: Number(plannedProgress.toFixed(2)),
+            actualProgress,
+            difference: Number(difference.toFixed(2)),
+            contractAmount: project.contractAmount,
+            projectBudget: project.projectBudget,
+            createdAt: project.createdAt,
+            updatedAt: project.updatedAt,
+          });
+        }
+      });
+
+      return response.ok(res, {
+        message: 'Behind projects fetched successfully',
+        data: {
+          totalBehindProjects: behindProjects.length,
+          projects: behindProjects,
+        },
+      });
+    } catch (error) {
+      console.error('getAllBehindProject error', error);
+      return response.error(res, error.message || 'Server error');
     }
   },
 };
