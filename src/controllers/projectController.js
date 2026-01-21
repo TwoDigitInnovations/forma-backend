@@ -204,39 +204,38 @@ const projectController = {
     }
   },
 
- deleteProject: async (req, res) => {
-  try {
-    const { id } = req.params;
+  deleteProject: async (req, res) => {
+    try {
+      const { id } = req.params;
 
-    const project = await Project.findOne({ _id: id, isActive: true });
+      const project = await Project.findOne({ _id: id, isActive: true });
 
-    if (!project) {
-      return res.status(404).json({
-        status: false,
-        message: "Project not found",
+      if (!project) {
+        return res.status(404).json({
+          status: false,
+          message: 'Project not found',
+        });
+      }
+
+      const userId = req.user?.id || req.userId;
+
+      await Project.findByIdAndUpdate(id, {
+        $set: {
+          isActive: false,
+          updatedBy: userId,
+        },
       });
+
+      await ActionPoint.deleteMany({ projectId: id });
+
+      return response.ok(res, {
+        message: 'Project and related action points deleted successfully',
+      });
+    } catch (error) {
+      console.error('Delete project error:', error);
+      return response.error(res, error.message || 'Failed to delete project');
     }
-
-    const userId = req.user?.id || req.userId;
-
-    await Project.findByIdAndUpdate(id, {
-      $set: {
-        isActive: false,
-        updatedBy: userId,
-      },
-    });
-
-    await ActionPoint.deleteMany({ projectId: id });
-
-    return response.ok(res, {
-      message: "Project and related action points deleted successfully",
-    });
-
-  } catch (error) {
-    console.error("Delete project error:", error);
-    return response.error(res, error.message || "Failed to delete project");
-  }
-},
+  },
 
   getProjectStats: async (req, res) => {
     try {
@@ -359,32 +358,26 @@ const projectController = {
       advanceAmount = Number(advanceAmount);
 
       if (isNaN(advanceAmount) || advanceAmount <= 0) {
-        return response.error(
-          res,
-          'Advance amount must be a valid number greater than zero',
-        );
+        return response.error(res, {
+          message: 'Advance amount must be a valid number greater than zero',
+        });
       }
 
       const project = await Project.findById(projectId);
+
+      if (project.contractAmount < advanceAmount) {
+        return response.error(res, {
+          message: 'Advance amount cannot be greater than contract amount',
+        });
+      }
       if (!project) return response.error(res, 'Project not found');
 
-      // OLD advance amount (if any)
       const oldAdvance = Number(project.advancePayment) || 0;
-
-      // TOTAL paid amount
       const oldPaid = Number(project.paidAmount) || 0;
-
-      /**
-       *  👉 LOGIC:
-       *  If advance was already added before:
-       *    - Remove OLD advance from paid
-       *    - Add NEW advance to paid
-       */
-
       const newPaidAmount = oldPaid - oldAdvance + advanceAmount;
 
-      project.advancePayment = advanceAmount; // update latest advance amount
-      project.paidAmount = newPaidAmount; // fix total paid
+      project.advancePayment = advanceAmount;
+      project.paidAmount = newPaidAmount;
 
       await project.save();
 
@@ -600,6 +593,9 @@ const projectController = {
         if (plannedProgress > 100) plannedProgress = 100;
 
         const difference = plannedProgress - actualProgress;
+        console.log('difference', difference);
+        console.log('plannedProgress', plannedProgress);
+        console.log('actualProgress', actualProgress);
 
         if (difference > 5) {
           behindProjects.push({

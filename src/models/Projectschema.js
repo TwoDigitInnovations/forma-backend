@@ -74,6 +74,10 @@ const projectSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    actualProgress: {
+      type: Number,
+      default: 0,
+    },
     certificates: [
       {
         certificateNo: String,
