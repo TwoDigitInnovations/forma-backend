@@ -151,9 +151,6 @@ const PricingPlanController = {
           });
         }
 
-        return response.error(res, {
-          message: 'Your plan has expired. Please renew from billing',
-        });
       }
 
       const plan = await PricingPlan.findById(planId);
