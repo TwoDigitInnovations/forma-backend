@@ -2,8 +2,6 @@ const CheckListItem = require('../models/checkListschema');
 const response = require('../../responses');
 
 const CheckListController = {
-
-  // ➤ CREATE Checklist Item
   create: async (req, res) => {
     try {
       const userId = req.user._id;
@@ -16,48 +14,51 @@ const CheckListController = {
       });
 
       return response.ok(res, {
-        message: "Checklist item created successfully",
+        message: 'Checklist item created successfully',
         data: newItem,
       });
-
     } catch (error) {
-      console.error("Create checklist error:", error);
-      return response.error(res, error.message || "Failed to create checklist item");
+      console.error('Create checklist error:', error);
+      return response.error(
+        res,
+        error.message || 'Failed to create checklist item',
+      );
     }
   },
 
-  // ➤ GET ALL Items by Project ID
   getByProject: async (req, res) => {
     try {
       const { projectId } = req.params;
 
-      const items = await CheckListItem.find({ projectId }).sort({ createdAt: -1 });
-
-      return response.ok(res, {
-        message: "Checklist items fetched successfully",
-        data: items,
+      const items = await CheckListItem.find({ projectId }).sort({
+        createdAt: -1,
       });
 
+      return response.ok(res, {
+        message: 'Checklist items fetched successfully',
+        data: items,
+      });
     } catch (error) {
-      return response.error(res, error.message || "Failed to fetch checklist items");
+      return response.error(
+        res,
+        error.message || 'Failed to fetch checklist items',
+      );
     }
   },
 
-  // ➤ GET Single Item by ID
   getById: async (req, res) => {
     try {
       const { itemId } = req.params;
 
       const item = await CheckListItem.findById(itemId);
-      if (!item) return response.error(res, "Checklist item not found");
+      if (!item) return response.error(res, 'Checklist item not found');
 
       return response.ok(res, {
-        message: "Checklist item fetched successfully",
+        message: 'Checklist item fetched successfully',
         data: item,
       });
-
     } catch (error) {
-      return response.error(res, error.message || "Failed to fetch item");
+      return response.error(res, error.message || 'Failed to fetch item');
     }
   },
 
@@ -69,18 +70,17 @@ const CheckListController = {
       const updated = await CheckListItem.findByIdAndUpdate(
         itemId,
         { $set: req.body },
-        { new: true }
+        { new: true },
       );
 
-      if (!updated) return response.error(res, "Checklist item not found");
+      if (!updated) return response.error(res, 'Checklist item not found');
 
       return response.ok(res, {
-        message: "Checklist item updated successfully",
+        message: 'Checklist item updated successfully',
         data: updated,
       });
-
     } catch (error) {
-      return response.error(res, error.message || "Failed to update item");
+      return response.error(res, error.message || 'Failed to update item');
     }
   },
 
@@ -90,17 +90,41 @@ const CheckListController = {
       const { itemId } = req.params;
 
       const deleted = await CheckListItem.findByIdAndDelete(itemId);
-      if (!deleted) return response.error(res, "Checklist item not found");
+      if (!deleted) return response.error(res, 'Checklist item not found');
 
       return response.ok(res, {
-        message: "Checklist item deleted successfully",
+        message: 'Checklist item deleted successfully',
       });
-
     } catch (error) {
-      return response.error(res, error.message || "Failed to delete item");
+      return response.error(res, error.message || 'Failed to delete item');
     }
   },
+  getStacts: async (req, res) => {
+    try {
+      const createdBy = req.user.id;
+      const projectId = req.query.projectId;
+      const status = 'Pending';
 
+      const filter = {
+        createdBy,
+        status,
+      };
+
+      if (projectId) {
+        filter.projectId = projectId;
+      }
+
+      const data = await CheckListItem.find(filter);
+
+      return response.ok(res, {
+        status: true,
+        count: data.length,
+        data,
+      });
+    } catch (error) {
+      return response.error(res, error.message || 'Failed to fetch stats');
+    }
+  },
 };
 
 module.exports = CheckListController;
