@@ -19,5 +19,5 @@ router.get(
 router.get('/dashboard/payments', authenticate, user.getPaymentDistribution);
 router.get('/dashboard/monthly-revenue', authenticate, user.getMonthlyRevenue);
 router.get('/dashboard/recent-payments', authenticate, user.getRecentPayments);
-
+router.get('/dashboardData', authenticate, user.DashboardStats);
 module.exports = router;

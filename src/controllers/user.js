@@ -2,6 +2,8 @@ const response = require('../../responses');
 const User = require('@models/User');
 const PaymentHistory = require('../models/PaymentSchema');
 const PricePlan = require('../models/PricingPlanSchema');
+const Project = require('../models/Projectschema');
+const mongoose = require('mongoose');
 
 module.exports = {
   fileUpload: async (req, res) => {
@@ -184,6 +186,40 @@ module.exports = {
           totalRevenue,
           activeSubscriptions,
           weeklyGrowth: Number(weeklyGrowth),
+        },
+      });
+    } catch (error) {
+      return response.error(res, error.message || 'Dashboard stats failed');
+    }
+  },
+
+  DashboardStats: async (req, res) => {
+    try {
+      const userId = req.user.id;
+
+      const projects = await Project.find({
+        OrganizationId: userId,
+      });
+
+      console.log(projects);
+      
+
+      let TotalContracts = 0;
+      let TotalPaid = 0;
+
+      projects.forEach((project) => {
+        TotalContracts += Number(project.contractAmount || 0);
+        TotalPaid += Number(project.paidAmount || 0);
+      });
+
+      const TotalBalance = TotalContracts - TotalPaid;
+
+      return response.ok(res, {
+        status: true,
+        data: {
+          TotalContracts,
+          TotalPaid,
+          TotalBalance,
         },
       });
     } catch (error) {
