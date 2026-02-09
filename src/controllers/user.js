@@ -201,9 +201,6 @@ module.exports = {
         OrganizationId: userId,
       });
 
-      console.log(projects);
-      
-
       let TotalContracts = 0;
       let TotalPaid = 0;
 
@@ -212,7 +209,13 @@ module.exports = {
         TotalPaid += Number(project.paidAmount || 0);
       });
 
-      const TotalBalance = TotalContracts - TotalPaid;
+      let TotalBalance = TotalContracts - TotalPaid; // let here
+
+      const round = (num) => Math.round(num * 100) / 100;
+
+      TotalContracts = round(TotalContracts);
+      TotalPaid = round(TotalPaid);
+      TotalBalance = round(TotalBalance);
 
       return response.ok(res, {
         status: true,

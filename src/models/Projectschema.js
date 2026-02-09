@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
 
+const roundToTwo = (num) => {
+  if (num === undefined || num === null) return num;
+  return Math.round(num * 100) / 100;
+};
+
 const projectSchema = new mongoose.Schema(
   {
     // Basic Information
@@ -45,18 +50,22 @@ const projectSchema = new mongoose.Schema(
     contractAmount: {
       type: Number,
       min: 0,
+      set: roundToTwo,
     },
     paidAmount: {
       type: Number,
       min: 0,
+      set: roundToTwo,
     },
     projectBudget: {
       type: Number,
       min: 0,
+      set: roundToTwo,
     },
     advancePayment: {
       type: Number,
       min: 0,
+      set: roundToTwo,
     },
     startDate: {
       type: Date,
