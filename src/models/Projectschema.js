@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const roundToTwo = (num) => {
   if (num === undefined || num === null) return num;
-  return Math.round(num * 100) / 100;
+  return Number(parseFloat(num).toFixed(2));
 };
 
 const projectSchema = new mongoose.Schema(
