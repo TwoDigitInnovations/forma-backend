@@ -60,10 +60,10 @@ const ProgramController = {
 
   update: async (req, res) => {
     try {
-      const { id } = req.params;
+      const { editId } = req.params;
 
       const updatedProgram = await Program.findByIdAndUpdate(
-        id,
+        editId,
         {
           name: req.body.name,
         },

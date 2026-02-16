@@ -23,7 +23,7 @@ const projectSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Program',
     },
-    programName: {
+    programType: {
       type: String,
     },
     description: {
