@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      // required: true,
       minlength: [6, 'Password must be at least 6 characters long'],
     },
     phone: {
@@ -39,6 +39,11 @@ const userSchema = new mongoose.Schema(
       enum: ['pending', 'verified', 'suspend'],
       default: 'pending',
     },
+    authProvider: {
+      type: String,
+      default: 'local', // local | google
+    },
+
     createdAt: {
       type: Date,
       default: Date.now,

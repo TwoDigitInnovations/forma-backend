@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.post('/login', authController.login);
 router.post('/register', authController.register);
+router.post('/googleAuth', authController.googleAuth);
 router.get('/profile', authenticate, authController.getUser);
 router.post('/sendOTP', authController.sendOTP);
 router.post('/verifyOTP', authController.verifyOTP);
@@ -21,10 +22,7 @@ router.get(
   authenticate,
   authController.getAllTeamMembers,
 );
-router.get(
-  '/getAllTeamMembersAdmin',
-  authController.getAllTeamMembersAdmin,
-);
+router.get('/getAllTeamMembersAdmin', authController.getAllTeamMembersAdmin);
 
 router.delete('/deleteTeamMember/:deleteId', authController.deleteTeamMember);
 router.get('/acceptInvite', authController.acceptInvite);

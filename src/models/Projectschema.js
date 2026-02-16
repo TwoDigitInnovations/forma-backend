@@ -19,6 +19,13 @@ const projectSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
+    programId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Program',
+    },
+    programName: {
+      type: String,
+    },
     description: {
       type: String,
       trim: true,

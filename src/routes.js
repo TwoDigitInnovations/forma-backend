@@ -11,6 +11,8 @@ const userRoutes = require('../src/routes/userRoutes');
 const PricePlanRoutes = require('../src/routes/PricePlanRoutes');
 const MeetingMinutesRoutes = require('../src/routes/meetingRoutes');
 const PaymentRoutes = require('../src/routes/PaymentRoutes');
+const attendeeRoutes = require('../src/routes/attendeeRoutes');
+const programRoutes = require('../src/routes/programRoutes');
 
 module.exports = (app) => {
   app.use('/auth', authRoutes);
@@ -26,4 +28,6 @@ module.exports = (app) => {
   app.use('/price-plan', PricePlanRoutes);
   app.use('/meeting-minutes', MeetingMinutesRoutes);
   app.use('/payment', PaymentRoutes);
+  app.use('/attendee', attendeeRoutes);
+  app.use('/program', programRoutes)
 };

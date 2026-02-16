@@ -8,6 +8,7 @@ const Payment = require('../models/PaymentSchema');
 // const mailNotification = require('./../services/mailNotification');
 const crypto = require('crypto');
 const Invite = require('../models/InviteSchema');
+const axios = require('axios');
 
 module.exports = {
   register: async (req, res) => {
@@ -36,6 +37,7 @@ module.exports = {
         phone,
         role,
         status: 'verified',
+        authProvider: 'local',
       });
 
       await newUser.save();
@@ -51,6 +53,70 @@ module.exports = {
       return res.status(500).json({ message: 'Server error' });
     }
   },
+
+  googleAuth: async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    console.log("Received token:", token);
+
+    if (!token) {
+      return res.status(400).json({ message: "Token missing" });
+    }
+
+    const googleRes = await axios.get(
+      "https://www.googleapis.com/oauth2/v3/userinfo",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    console.log("Google Data:", googleRes.data);
+
+    const { email, name, picture, sub } = googleRes.data;
+
+    let user = await User.findOne({ email });
+    console.log("DB User:", user);
+
+    if (!user) {
+      console.log("Creating new user...");
+      user = await User.create({
+        name,
+        email,
+        googleId: sub,
+        profilePic: picture,
+        status: "verified",
+        role: "User",
+        authProvider: "google",
+      });
+    } else {
+      console.log("User exists");
+      if (!user.googleId) {
+        user.googleId = sub;
+        user.authProvider = "google";
+        await user.save();
+      }
+    }
+
+    const jwtToken = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
+
+    res.json({
+      message: "Google authentication successful",
+      token: jwtToken,
+      user,
+    });
+  } catch (error) {
+    console.log("Full Error:", error.response?.data || error.message);
+    res.status(400).json({ message: "Google auth failed" });
+  }
+},
+
 
   login: async (req, res) => {
     try {
@@ -414,7 +480,7 @@ module.exports = {
       );
     }
   },
-  
+
   deleteTeamMember: async (req, res) => {
     try {
       const organizationId = req.body?.id;

@@ -71,7 +71,10 @@ const meetingMinutesSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
-
+    attendeeGroupId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'AttendeeGroup',
+    },
     membersPresent: [memberSchema],
 
     agendas: [agendaSchema],
