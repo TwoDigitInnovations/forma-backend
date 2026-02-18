@@ -53,6 +53,10 @@ const projectController = {
         filter.OrganizationId = req.query.OrganizationId;
       }
 
+      if (req.query.programId) {
+        filter.programId = req.query.programId;
+      }
+
       if (req.query.search) {
         filter.$or = [
           { projectName: { $regex: req.query.search, $options: 'i' } },
