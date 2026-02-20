@@ -192,12 +192,18 @@ module.exports = {
       return response.error(res, error.message || 'Dashboard stats failed');
     }
   },
+
   DashboardStats: async (req, res) => {
     try {
       const userId = req.user.id;
 
       const projects = await Project.find({
-        OrganizationId: userId,
+        isActive: true,
+        members: {
+          $elemMatch: {
+            userId: new mongoose.Types.ObjectId(userId),
+          },
+        },
       });
 
       let TotalContracts = 0;
@@ -208,19 +214,15 @@ module.exports = {
         TotalPaid += Number(project.paidAmount || 0);
       });
 
-      let TotalBalance = TotalContracts - TotalPaid; // let here
-
       const round = (num) => Math.round(num * 100) / 100;
 
-      TotalContracts = round(TotalContracts);
-      TotalPaid = round(TotalPaid);
-      TotalBalance = round(TotalBalance);
+      const TotalBalance = round(TotalContracts - TotalPaid);
 
       return response.ok(res, {
         status: true,
         data: {
-          TotalContracts,
-          TotalPaid,
+          TotalContracts: round(TotalContracts),
+          TotalPaid: round(TotalPaid),
           TotalBalance,
         },
       });

@@ -1,8 +1,8 @@
 const Program = require('../models/programSchema');
 const response = require('../../responses');
+const Project = require('../models/Projectschema');
 
 const ProgramController = {
-  // Create Program
   create: async (req, res) => {
     try {
       const userId = req.user.id;
@@ -24,17 +24,39 @@ const ProgramController = {
 
   getAll: async (req, res) => {
     try {
-      const programs = await Program.find({
-        createdBy: req.user.id,
-      }).sort({ createdAt: -1 });
+      const { projectId } = req.params;
+      const userId = req.user.id;
+
+      let programs = [];
+
+      if (projectId) {
+        // Check project access
+        const project = await Project.findOne({
+          _id: projectId,
+          'members.userId': userId,
+        });
+
+        if (!project) {
+          return res.status(403).json({ message: 'Access denied' });
+        }
+
+        // Find programs linked to that project
+        programs = await Program.find({
+          projectIds: projectId,
+        }).sort({ createdAt: -1 });
+      } else {
+        // Personal programs
+        programs = await Program.find({
+          createdBy: userId,
+        }).sort({ createdAt: -1 });
+      }
 
       return response.ok(res, {
         message: 'Programs fetched successfully',
         data: programs,
       });
     } catch (error) {
-      console.error('Get Programs error:', error);
-      return response.error(res, error.message);
+      return res.status(500).json({ message: error.message });
     }
   },
 
@@ -67,7 +89,7 @@ const ProgramController = {
         {
           name: req.body.name,
         },
-        { new: true }
+        { new: true },
       );
 
       if (!updatedProgram) {

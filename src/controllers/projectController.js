@@ -4,27 +4,68 @@ const User = require('@models/User');
 const mongoose = require('mongoose');
 const { getMonthDiff } = require('../helper/user');
 const ActionPoint = require('../models/actionPointsSchema');
+const Program = require('../models/programSchema');
 
 const projectController = {
   createProject: async (req, res) => {
     try {
-      const payload = req?.body || {};
-      payload.OrganizationId = req.user?.id || req.userId;
+      const { projectName, programId, ...rest } = req.body;
+      const userId = req.user.id;
+
+      if (!projectName?.trim()) {
+        return res.status(400).json({
+          status: false,
+          message: 'Project name is required',
+        });
+      }
 
       const existingProject = await Project.findOne({
-        projectName: payload.projectName,
-        location: payload.location,
         isActive: true,
+        projectName: { $regex: `^${projectName.trim()}$`, $options: 'i' },
+        members: {
+          $elemMatch: {
+            userId: new mongoose.Types.ObjectId(userId),
+            role: 'owner',
+          },
+        },
       });
 
       if (existingProject) {
         return res.status(400).json({
           status: false,
-          message: 'Project with the same name and location already exists',
+          message: 'You already have a project with this name',
         });
       }
 
-      const newProject = new Project(payload);
+      const newProject = new Project({
+        ...rest,
+        projectName: projectName.trim(),
+        programId,
+        members: [
+          {
+            userId,
+            role: 'owner',
+          },
+        ],
+      });
+      if (programId) {
+        const program = await Program.findOne({
+          _id: programId,
+        });
+
+        if (!program) {
+          return res.status(404).json({
+            status: false,
+            message: 'Program not found',
+          });
+        }
+
+        await Program.updateOne(
+          { _id: programId },
+          { $addToSet: { projectIds: newProject._id } },
+        );
+      }
+
       await newProject.save();
 
       return response.ok(res, {
@@ -50,7 +91,9 @@ const projectController = {
       }
 
       if (req.query.OrganizationId) {
-        filter.OrganizationId = req.query.OrganizationId;
+        filter.members = {
+          $elemMatch: { userId: req.query.OrganizationId },
+        };
       }
 
       if (req.query.programId) {
@@ -71,7 +114,7 @@ const projectController = {
       }
 
       const projects = await Project.find(filter)
-        .populate('OrganizationId')
+        .populate('members.userId')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
@@ -98,7 +141,7 @@ const projectController = {
     try {
       console.log(req?.params?.id);
       const project = await Project.findById(req?.params?.id).populate(
-        'OrganizationId',
+        'members.userId',
       );
 
       console.log(project);
@@ -123,7 +166,8 @@ const projectController = {
   updateProject: async (req, res) => {
     try {
       const { id } = req.params;
-      const payload = req?.body || {};
+      const payload = req.body || {};
+
       const project = await Project.findById(id);
 
       if (!project || !project.isActive) {
@@ -132,13 +176,27 @@ const projectController = {
           message: 'Project not found',
         });
       }
-      payload.OrganizationId = req.user?.id || req.userId;
+
+      const isOwner = project.members.some(
+        (member) =>
+          member.userId.toString() === req.user.id && member.role === 'owner',
+      );
+
+      if (!isOwner) {
+        return res.status(403).json({
+          status: false,
+          message: 'Only owner can update the project',
+        });
+      }
+
+      delete payload.members;
+      payload.updatedBy = req.user.id;
 
       const updatedProject = await Project.findByIdAndUpdate(
         id,
         { $set: payload },
         { new: true, runValidators: true },
-      ).populate('OrganizationId');
+      ).populate('members.userId');
 
       return response.ok(res, {
         message: 'Project updated successfully',
@@ -186,7 +244,12 @@ const projectController = {
 
       const updateData = {
         status,
-        OrganizationId: req.user?.id || req.userId,
+        members: [
+          {
+            userId: req.user.id,
+            role: 'owner',
+          },
+        ],
       };
 
       const updatedProject = await Project.findByIdAndUpdate(
@@ -530,7 +593,10 @@ const projectController = {
       );
 
       if (isAlreadyInUser)
-        return response.error(res, 'Project already added for this member');
+        return response.error({
+          res,
+          message: 'Project already added for this member',
+        });
 
       project.assignedMembers.push({
         memberId,
@@ -557,10 +623,23 @@ const projectController = {
     try {
       const { userId } = req.query;
 
+      if (!userId) {
+        return res.status(400).json({
+          status: false,
+          message: 'userId is required',
+        });
+      }
+
       const projects = await Project.find({
-        OrganizationId: new mongoose.Types.ObjectId(userId),
+        members: {
+          $elemMatch: {
+            userId: new mongoose.Types.ObjectId(userId),
+            role: 'owner',
+          },
+        },
+        isActive: true,
       })
-        .populate('OrganizationId')
+        .populate('members.userId')
         .sort({ createdAt: -1 });
 
       return response.ok(res, {
@@ -568,7 +647,6 @@ const projectController = {
         data: projects,
       });
     } catch (error) {
-      console.error('Get projects error:', error);
       return response.error(res, error.message || 'Failed to fetch projects');
     }
   },
@@ -597,9 +675,6 @@ const projectController = {
         if (plannedProgress > 100) plannedProgress = 100;
 
         const difference = plannedProgress - actualProgress;
-        console.log('difference', difference);
-        console.log('plannedProgress', plannedProgress);
-        console.log('actualProgress', actualProgress);
 
         if (difference > 5) {
           behindProjects.push({
@@ -633,6 +708,94 @@ const projectController = {
     } catch (error) {
       console.error('getAllBehindProject error', error);
       return response.error(res, error.message || 'Server error');
+    }
+  },
+  addCollaborator: async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const { userId, role } = req.body;
+      console.log('Adding collaborator', { projectId, userId, role });
+      const project = await Project.findById(projectId);
+
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+
+      const isOwner = project.members.find(
+        (m) => m.userId.toString() === req.user.id && m.role === 'owner',
+      );
+
+      if (!isOwner) {
+        return res.status(403).json({ message: 'Access denied.Only owner can add members' });
+      }
+
+      const alreadyMember = project.members.find(
+        (m) => m.userId.toString() === userId,
+      );
+
+      if (alreadyMember) {
+        return res.status(400).json({ message: 'User already added' });
+      }
+
+      project.members.push({
+        userId,
+        role: role || 'editor',
+      });
+
+      await project.save();
+
+      return response.ok(res, {
+        message: 'Collaborator added',
+        data: project,
+      });
+    } catch (err) {
+      return response.error(res, err.message || 'Failed to add collaborator');
+    }
+  },
+  removeCollaborator: async (req, res) => {
+    try {
+      const { projectId, userId } = req.params;
+
+      const project = await Project.findById(projectId);
+
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+
+      const isOwner = project.members.find(
+        (m) => m.userId.toString() === req.user.id && m.role === 'owner',
+      );
+
+      if (!isOwner) {
+        return res.status(403).json({
+          status: false,
+          message: 'Access denied. Members are not allowed to remove users',
+        });
+      }
+
+      const member = project.members.find(
+        (m) => m.userId.toString() === userId,
+      );
+
+      if (member && member.role === 'owner') {
+        return res.status(400).json({ message: 'Owner cannot be removed' });
+      }
+
+      project.members = project.members.filter(
+        (m) => m.userId.toString() !== userId,
+      );
+
+      await project.save();
+
+      return response.ok(res, {
+        message: 'Collaborator removed',
+        data: project,
+      });
+    } catch (err) {
+      return response.error(
+        res,
+        err.message || 'Failed to remove collaborator',
+      );
     }
   },
 };

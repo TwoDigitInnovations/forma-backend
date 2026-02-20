@@ -58,5 +58,10 @@ router.get(
 );
 
 router.get('/getAllBehindProjects', authenticate, Project.getAllBehindProject);
-
+router.post('/add-member/:projectId', authenticate, Project.addCollaborator);
+router.delete(
+  '/remove-member/:projectId/:userId',
+  authenticate,
+  Project.removeCollaborator,
+);
 module.exports = router;

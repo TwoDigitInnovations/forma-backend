@@ -5,6 +5,19 @@ const roundToTwo = (num) => {
   return Number(parseFloat(num).toFixed(2));
 };
 
+const memberSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  role: {
+    type: String,
+    enum: ['owner', 'editor'],
+    default: 'editor',
+  },
+});
+
 const projectSchema = new mongoose.Schema(
   {
     // Basic Information
@@ -19,6 +32,7 @@ const projectSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
+    members: [memberSchema],
     programId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Program',
