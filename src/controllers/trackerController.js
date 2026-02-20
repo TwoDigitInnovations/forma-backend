@@ -33,9 +33,9 @@ const trackerController = {
   getAllTracker: async (req, res) => {
     try {
       const trackers = await tracker
-        .find({ owner: req.user?.id, ProjectId: req.query.ProjectId })
+        .find({ ProjectId: req.query.ProjectId })
         .populate('WorkplanId')
-        .populate('owner')
+        // .populate('owner')
         .populate('ProjectId')
         .sort({ createdAt: -1 });
 

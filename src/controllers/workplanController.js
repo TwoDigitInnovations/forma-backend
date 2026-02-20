@@ -36,7 +36,7 @@ const workplanController = {
             const query = searchTerm
                 ? { planName: { $regex: searchTerm, $options: 'i' } }
                 : {};
-            query.owner = req.user.id;
+            // query.owner = req.user.id;
             query.projectId = projectId;
 
             const total = await WorkPlan.countDocuments(query);
@@ -113,7 +113,7 @@ const workplanController = {
             const { planId } = req.params;
 
             const { workActivities } = req.body;
-            console.log(planId, workActivities);
+          
             const plan = await WorkPlan.findById(planId);
             if (!plan) return response.error(res, 'work Plan not found');
 
