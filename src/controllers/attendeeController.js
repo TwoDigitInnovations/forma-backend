@@ -29,12 +29,10 @@ const AttendeeGroupController = {
   getAll: async (req, res) => {
     try {
       const groups = await AttendeeGroup.find({
-        createdBy: req.user.id, // filter here
-      }).sort({
-        createdAt: -1, // sort only
+        createdBy: req.user.id, 
+      }).populate("createdBy", "name email").sort({
+        createdAt: -1, 
       });
-
-      console.log(req.user.id);
 
       return response.ok(res, {
         message: 'Attendee groups fetched successfully',
@@ -68,10 +66,10 @@ const AttendeeGroupController = {
 
   update: async (req, res) => {
     try {
-      const { id } = req.params;
+      const { editId } = req.params;
 
       const updatedGroup = await AttendeeGroup.findByIdAndUpdate(
-        id,
+        editId,
         {
           title: req.body.title,
           attendees: req.body.attendees,
@@ -95,9 +93,9 @@ const AttendeeGroupController = {
 
   delete: async (req, res) => {
     try {
-      const { id } = req.params;
+      const { editId } = req.params;
 
-      const deletedGroup = await AttendeeGroup.findByIdAndDelete(id);
+      const deletedGroup = await AttendeeGroup.findByIdAndDelete(editId);
 
       if (!deletedGroup) {
         return response.error(res, 'Attendee group not found');

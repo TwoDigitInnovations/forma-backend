@@ -11,6 +11,6 @@ router.get('/getById/:id', authenticate, AttendeeGroupController.getById);
 
 router.put('/update/:editId', authenticate, AttendeeGroupController.update);
 
-router.delete('/delete/:id', authenticate, AttendeeGroupController.delete);
+router.delete('/delete/:editId', authenticate, AttendeeGroupController.delete);
 
 module.exports = router;

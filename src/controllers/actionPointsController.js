@@ -1,5 +1,6 @@
 const ActionPoints = require('../models/actionPointsSchema');
 const response = require('../../responses');
+const Project = require('../models/Projectschema');
 
 const ActionPointsController = {
   create: async (req, res) => {
@@ -113,22 +114,35 @@ const ActionPointsController = {
   getAllActionPoints: async (req, res) => {
     try {
       const { projectId } = req.query;
-      const orgId = req.user.id; // ✅ FIXED
+      const userId = req.user.id;
 
-      let filter = {
-        createdBy: orgId, // user reference
-      };
+      let filter = {};
 
       if (projectId && projectId !== 'all') {
+        const project = await Project.findOne({
+          _id: projectId,
+          members: { $elemMatch: { userId: userId } },
+        });
+
+        if (!project) {
+          return response.error(res, 'You are not a member of this project');
+        }
+
         filter.projectId = projectId;
+      } else {
+        const projects = await Project.find({
+          members: { $elemMatch: { userId: userId } },
+        }).select('_id');
+
+        const projectIds = projects.map((p) => p._id);
+
+        filter.projectId = { $in: projectIds };
       }
 
       const items = await ActionPoints.find(filter)
         .populate('createdBy')
         .populate('projectId')
-        .sort({
-          createdAt: -1,
-        });
+        .sort({ createdAt: -1 });
 
       return response.ok(res, {
         message: 'Action points fetched successfully',
@@ -142,6 +156,7 @@ const ActionPointsController = {
       );
     }
   },
+
   updateStatus: async (req, res) => {
     try {
       const { id } = req.params;
