@@ -396,13 +396,11 @@ module.exports = {
         return response.error(res, 'User not found');
       }
 
-      // Purana password check karo
       const isMatch = await bcrypt.compare(currentPassword, user.password);
       if (!isMatch) {
         return response.error(res, 'Old password is incorrect');
       }
 
-      // New password encrypt karke save karo
       const salt = await bcrypt.genSalt(10);
       user.password = await bcrypt.hash(newPassword, salt);
       await user.save();

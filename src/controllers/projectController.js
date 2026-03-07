@@ -343,7 +343,9 @@ const projectController = {
       const project = await Project.findById(projectId);
       if (!project) return response.error(res, 'Project not found');
 
-      project.paidAmount += Number(paidAmount);
+      project.paidAmount =
+        (project.paidAmount || 0) + (Number(paidAmount) || 0);
+
       await project.save();
 
       return response.ok(res, {
@@ -358,6 +360,7 @@ const projectController = {
       );
     }
   },
+
   updateCertificateStatus: async (req, res) => {
     try {
       const { certId, projectId } = req.params;
@@ -726,7 +729,9 @@ const projectController = {
       );
 
       if (!isOwner) {
-        return res.status(403).json({ message: 'Access denied.Only owner can add members' });
+        return res
+          .status(403)
+          .json({ message: 'Access denied.Only owner can add members' });
       }
 
       const alreadyMember = project.members.find(
