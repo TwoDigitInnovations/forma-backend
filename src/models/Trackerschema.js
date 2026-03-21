@@ -13,6 +13,10 @@ const trackerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'workplan',
     },
+    level: {
+      type: String,
+      required: true,
+    },
     ProjectId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Project',
