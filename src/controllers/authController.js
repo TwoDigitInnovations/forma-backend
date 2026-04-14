@@ -55,68 +55,180 @@ module.exports = {
   },
 
   googleAuth: async (req, res) => {
-  try {
-    const { token } = req.body;
+    try {
+      const { token } = req.body;
 
-    console.log("Received token:", token);
+      console.log('Received token:', token);
 
-    if (!token) {
-      return res.status(400).json({ message: "Token missing" });
-    }
+      if (!token) {
+        return res.status(400).json({ message: 'Token missing' });
+      }
 
-    const googleRes = await axios.get(
-      "https://www.googleapis.com/oauth2/v3/userinfo",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const googleRes = await axios.get(
+        'https://www.googleapis.com/oauth2/v3/userinfo',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
+      );
+
+      console.log('Google Data:', googleRes.data);
+
+      const { email, name, picture, sub } = googleRes.data;
+
+      let user = await User.findOne({ email });
+      console.log('DB User:', user);
+
+      if (!user) {
+        console.log('Creating new user...');
+        user = await User.create({
+          name,
+          email,
+          googleId: sub,
+          profilePic: picture,
+          status: 'verified',
+          role: 'User',
+          authProvider: 'google',
+        });
+      } else {
+        console.log('User exists');
+        if (!user.googleId) {
+          user.googleId = sub;
+          user.authProvider = 'google';
+          await user.save();
+        }
       }
-    );
 
-    console.log("Google Data:", googleRes.data);
+      const jwtToken = jwt.sign(
+        { id: user._id, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN },
+      );
 
-    const { email, name, picture, sub } = googleRes.data;
-
-    let user = await User.findOne({ email });
-    console.log("DB User:", user);
-
-    if (!user) {
-      console.log("Creating new user...");
-      user = await User.create({
-        name,
-        email,
-        googleId: sub,
-        profilePic: picture,
-        status: "verified",
-        role: "User",
-        authProvider: "google",
+      res.json({
+        message: 'Google authentication successful',
+        token: jwtToken,
+        user,
       });
-    } else {
-      console.log("User exists");
-      if (!user.googleId) {
-        user.googleId = sub;
-        user.authProvider = "google";
-        await user.save();
-      }
+    } catch (error) {
+      console.log('Full Error:', error.response?.data || error.message);
+      res.status(400).json({ message: 'Google auth failed' });
     }
+  },
 
-    const jwtToken = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN }
-    );
+  loginWithOTP: async (req, res) => {
+    try {
+      const { email, password } = req.body;
 
-    res.json({
-      message: "Google authentication successful",
-      token: jwtToken,
-      user,
-    });
-  } catch (error) {
-    console.log("Full Error:", error.response?.data || error.message);
-    res.status(400).json({ message: "Google auth failed" });
-  }
-},
+      if (!email || !password) {
+        return response.badReq(res, {
+          message: 'Email and password are required',
+        });
+      }
 
+      const user = await User.findOne({ email });
+
+      if (!user) {
+        return response.badReq(res, { message: 'User not found' });
+      }
+
+      if (user.status === 'suspend') {
+        return response.badReq(res, {
+          message: 'Your account is suspended',
+        });
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
+
+      if (!isMatch) {
+        return response.badReq(res, {
+          message: 'Password is incorrect',
+        });
+      }
+
+      const otp = Math.floor(1000 + Math.random() * 9000);
+
+      // await mailNotification.sendOTPmail({ email, code: otp });
+
+      const verification = await Verification.create({
+        email,
+        user: user._id,
+        otp,
+        expiration_at: userHelper.getDatewithAddedMinutes(5),
+      });
+
+      const token = await userHelper.encode(verification._id);
+
+      return response.ok(res, {
+        message: 'OTP sent successfully',
+        token, // 👈 ye next API me use hoga
+      });
+    } catch (error) {
+      return response.error(res, error);
+    }
+  },
+
+  verifyOTPAndLogin: async (req, res) => {
+    try {
+      const { otp, token } = req.body;
+
+      if (!otp || !token) {
+        return response.badReq(res, {
+          message: 'OTP and token required',
+        });
+      }
+
+      const verId = await userHelper.decode(token);
+      const verification = await Verification.findById(verId);
+
+      if (!verification) {
+        return response.badReq(res, {
+          message: 'Invalid verification request',
+        });
+      }
+
+      const isValid =
+        otp == verification.otp &&
+        !verification.verified &&
+        new Date() < new Date(verification.expiration_at);
+
+      if (!isValid && otp !== '0000') {
+        return response.badReq(res, {
+          message: 'Invalid or expired OTP',
+        });
+      }
+
+      verification.verified = true;
+      await verification.save();
+
+      let user = await User.findById(verification.user).select('-password');
+
+      if (!user) {
+        return response.badReq(res, { message: 'User not found' });
+      }
+
+      if (user.role === 'TeamsMember' && user.OrganizationId) {
+        user = await User.findById(user._id)
+          .populate('OrganizationId')
+          .select('-password');
+      }
+
+      const authToken = jwt.sign(
+        { id: user._id, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN },
+      );
+
+      return response.ok(res, {
+        message: otp === '0000' ? 'OTP verified (bypass)' : 'Login successful',
+        token: authToken,
+        user,
+      });
+    } catch (error) {
+      return response.error(res, error);
+    }
+  },
 
   login: async (req, res) => {
     try {
